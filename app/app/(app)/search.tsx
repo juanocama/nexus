@@ -15,7 +15,6 @@ import {
 import { useRouter, Link } from 'expo-router';
 import { colors, borderRadius, typography, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/context/AuthContext';
 
 const MOCK_RESULTS = [
   {
@@ -168,7 +167,7 @@ export default function SearchScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.avatarSmall}>
-            <Text style={styles.headerAvatarText}>{user?.full_name?.charAt(0) || 'U'}</Text>
+            <Text style={styles.headerAvatarText}>N</Text>
           </View>
           <Text style={styles.headerBrand}>NEXUS</Text>
         </View>

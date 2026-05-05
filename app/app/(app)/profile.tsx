@@ -13,17 +13,13 @@ import {
 import { useRouter, Link } from 'expo-router';
 import { colors, borderRadius, typography, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/context/AuthContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-
-  const displayName = user?.full_name?.split(' ')[0] || 'Usuario';
 
   const mockUser = {
-    name: user?.full_name || 'Estudiante Unisabana',
-    email: user?.email || 'estudiante@unisabana.edu.co',
+    name: 'Estudiante Unisabana',
+    email: 'estudiante@unisabana.edu.co',
     faculty: 'Ingeniería',
     phone: '+57 300 123 4567',
     rating: 4.8,
@@ -31,6 +27,8 @@ export default function ProfileScreen() {
     sabana_coins: 150,
     member_since: '2024',
   };
+
+  const displayName = mockUser.name.split(' ')[0];
 
   return (
     <SafeAreaView style={styles.container}>

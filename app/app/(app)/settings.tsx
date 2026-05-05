@@ -14,7 +14,6 @@ import {
 import { useRouter } from 'expo-router';
 import { colors, borderRadius, typography, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/context/AuthContext';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -53,13 +52,11 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.avatarSmall}>
-            <Text style={styles.headerAvatarText}>{user?.full_name?.charAt(0) || 'U'}</Text>
-          </View>
-          <Text style={styles.headerBrand}>NEXUS</Text>
-        </View>
-        <View style={styles.headerRight} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.primary.contrast} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Configuración</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.content}>
@@ -189,40 +186,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.primary.default,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.md : spacing.md,
     paddingBottom: spacing.md,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
+  backButton: {
+    padding: spacing.xs,
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  headerBrand: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
+  headerTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold,
     color: colors.primary.contrast,
-    fontFamily: typography.family.bold,
-    letterSpacing: 2,
-  },
-  avatarSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.default,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerAvatarText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.primary.contrast,
-    fontFamily: typography.family.bold,
+    fontFamily: typography.family.semibold,
   },
   content: {
     flex: 1,
