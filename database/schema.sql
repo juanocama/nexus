@@ -33,12 +33,15 @@ CREATE TABLE users (
     id              UUID                PRIMARY KEY DEFAULT uuid_generate_v4(),
     email           VARCHAR(255)        NOT NULL UNIQUE,
     full_name       VARCHAR(255)        NOT NULL,
+    password_hash   VARCHAR(255),
     profile_photo_url  VARCHAR(500),
     faculty         VARCHAR(150),
     phone           VARCHAR(20),
     status          user_status_enum    NOT NULL DEFAULT 'active',
     ms_graph_token  TEXT,
     refresh_token   TEXT,
+    average_rating  DECIMAL(3, 2)       NOT NULL DEFAULT 0,
+    total_trips     INTEGER             NOT NULL DEFAULT 0,
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 
@@ -292,6 +295,41 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trigger_increment_seats
     AFTER UPDATE ON bookings
     FOR EACH ROW EXECUTE FUNCTION increment_available_seats();
+
+-- Auto-update user average_rating after a review is inserted
+CREATE OR REPLACE FUNCTION update_user_average_rating()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE users
+    SET average_rating = COALESCE(
+        (SELECT AVG(rating) FROM reviews WHERE reviewed_user_id = NEW.reviewed_user_id),
+        0
+    )
+    WHERE id = NEW.reviewed_user_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_average_rating
+    AFTER INSERT ON reviews
+    FOR EACH ROW EXECUTE FUNCTION update_user_average_rating();
+
+-- Auto-increment total_trips when trip status becomes 'completed'
+CREATE OR REPLACE FUNCTION increment_total_trips()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        UPDATE users
+        SET total_trips = total_trips + 1
+        WHERE id = NEW.driver_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_increment_total_trips
+    AFTER UPDATE ON trips
+    FOR EACH ROW EXECUTE FUNCTION increment_total_trips();
 
 -- =====================================================
 -- 11. SEED DATA (INITIAL REVIEW TAGS)
