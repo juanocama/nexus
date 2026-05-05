@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { LoginButton } from '@/components/LoginButton';
@@ -71,11 +72,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Text style={styles.logoText}>N</Text>
-              </View>
-            </View>
+            <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
             <Text style={styles.title}>Nexus</Text>
             <Text style={styles.subtitle}>
               Carpooling Universitario
@@ -207,27 +204,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  logoContainer: {
-    marginBottom: spacing.lg,
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.default,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: colors.secondary.default,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  logoText: {
-    color: colors.primary.contrast,
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.extrabold,
-    fontFamily: typography.family.bold,
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: typography.sizes.xxxl,

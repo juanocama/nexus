@@ -44,7 +44,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Buscar',
+          title: 'Find',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search" size={size} color={color} />
           ),

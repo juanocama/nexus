@@ -10,12 +10,40 @@ import {
   TextInput,
   FlatList,
   Platform,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { colors, borderRadius, typography, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 
-const MOCK_TRIPS = [
+const { width } = Dimensions.get('window');
+
+const MOCK_FREQUENT_ROUTES = [
+  {
+    id: '1',
+    name: 'Puente Madera',
+    time: '7:00 AM',
+    days: 'Lunes y Viernes',
+    destination: 'Universidad de La Sabana',
+  },
+  {
+    id: '2',
+    name: 'Portal Norte',
+    time: '7:30 AM',
+    days: 'Lunes a Viernes',
+    destination: 'Universidad de La Sabana',
+  },
+  {
+    id: '3',
+    name: 'Chicó Norte',
+    time: '6:45 AM',
+    days: 'Martes y Jueves',
+    destination: 'Universidad de La Sabana',
+  },
+];
+
+const MOCK_AVAILABLE_TRIPS = [
   {
     id: '1',
     driver_name: 'Carlos Martínez',
@@ -26,9 +54,7 @@ const MOCK_TRIPS = [
     departure_time: '7:00 AM',
     arrival_time: '7:45 AM',
     available_seats: 3,
-    total_seats: 4,
     price: 8000,
-    date: 'Hoy',
   },
   {
     id: '2',
@@ -40,46 +66,38 @@ const MOCK_TRIPS = [
     departure_time: '7:30 AM',
     arrival_time: '8:15 AM',
     available_seats: 2,
-    total_seats: 4,
     price: 6500,
-    date: 'Hoy',
-  },
-  {
-    id: '3',
-    driver_name: 'Andrés Rodríguez',
-    driver_faculty: 'Economía',
-    driver_rating: 4.5,
-    origin: 'Portal Norte',
-    destination: 'Universidad de La Sabana',
-    departure_time: '8:00 AM',
-    arrival_time: '8:40 AM',
-    available_seats: 1,
-    total_seats: 4,
-    price: 5000,
-    date: 'Hoy',
-  },
-  {
-    id: '4',
-    driver_name: 'Laura Gómez',
-    driver_faculty: 'Comunicación',
-    driver_rating: 4.7,
-    origin: 'Chicó Norte',
-    destination: 'Universidad de La Sabana',
-    departure_time: '6:45 AM',
-    arrival_time: '7:30 AM',
-    available_seats: 2,
-    total_seats: 3,
-    price: 7000,
-    date: 'Hoy',
   },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [searchOrigin, setSearchOrigin] = useState('');
-  const [searchDest] = useState('Universidad de La Sabana');
+  const [searchText, setSearchText] = useState('');
 
-  const renderTripCard = ({ item }: { item: typeof MOCK_TRIPS[0] }) => (
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buenos días';
+    if (hour < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  };
+
+  const renderFrequentRoute = ({ item }: { item: typeof MOCK_FREQUENT_ROUTES[0] }) => (
+    <TouchableOpacity style={styles.routeCard}>
+      <View style={styles.routeIcon}>
+        <Ionicons name="car-outline" size={20} color={colors.secondary.default} />
+      </View>
+      <View style={styles.routeInfo}>
+        <Text style={styles.routeName}>{item.name}</Text>
+        <View style={styles.routeMeta}>
+          <Ionicons name="time-outline" size={12} color={colors.text.muted} />
+          <Text style={styles.routeTime}>{item.time} - {item.days}</Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
+    </TouchableOpacity>
+  );
+
+  const renderTripCard = ({ item }: { item: typeof MOCK_AVAILABLE_TRIPS[0] }) => (
     <Link href={`/(app)/trip/${item.id}`} asChild>
       <TouchableOpacity style={styles.tripCard}>
         <View style={styles.cardHeader}>
@@ -93,161 +111,163 @@ export default function HomeScreen() {
             </View>
           </View>
           <View style={styles.ratingBadge}>
-            <Ionicons name="star" size={12} color="#F59E0B" />
+            <Ionicons name="star" size={10} color="#F59E0B" />
             <Text style={styles.ratingText}>{item.driver_rating}</Text>
           </View>
         </View>
-
         <View style={styles.routeContainer}>
           <View style={styles.routePoint}>
-            <Ionicons name="location" size={16} color={colors.tertiary.default} />
+            <Ionicons name="location" size={14} color={colors.tertiary.default} />
             <Text style={styles.routeText} numberOfLines={1}>{item.origin}</Text>
           </View>
           <View style={styles.routeLine} />
           <View style={styles.routePoint}>
-            <Ionicons name="flag" size={16} color={colors.secondary.default} />
+            <Ionicons name="flag" size={14} color={colors.secondary.default} />
             <Text style={styles.routeText} numberOfLines={1}>{item.destination}</Text>
           </View>
         </View>
-
         <View style={styles.cardFooter}>
           <View style={styles.tripDetails}>
             <Ionicons name="time-outline" size={14} color={colors.text.muted} />
-            <Text style={styles.detailText}>{item.departure_time} - {item.arrival_time}</Text>
+            <Text style={styles.detailText}>{item.departure_time}</Text>
           </View>
           <View style={styles.tripDetails}>
             <Ionicons name="people-outline" size={14} color={colors.text.muted} />
             <Text style={styles.detailText}>{item.available_seats} asientos</Text>
           </View>
-        </View>
-
-        <View style={styles.cardBottom}>
           <Text style={styles.priceText}>${item.price.toLocaleString('es-CO')}</Text>
-          <View style={styles.bookButton}>
-            <Text style={styles.bookButtonText}>Reservar</Text>
-          </View>
         </View>
       </TouchableOpacity>
     </Link>
   );
 
+  const quickActions = [
+    {
+      title: 'Publicar trayecto',
+      icon: 'add',
+      color: colors.tertiary.default,
+      bg: colors.tertiary.default + '20',
+      href: '/(app)/publish',
+    },
+    {
+      title: 'Mis reservas',
+      icon: 'checkmark-circle',
+      color: colors.secondary.default,
+      bg: colors.secondary.default + '20',
+      href: '/(app)/bookings',
+    },
+    {
+      title: 'Mis viajes',
+      icon: 'car-sport',
+      color: '#6366F1',
+      bg: '#6366F120',
+      href: '/(app)/bookings',
+    },
+    {
+      title: 'Mis publicaciones',
+      icon: 'document-text',
+      color: '#F59E0B',
+      bg: '#F59E0B20',
+      href: '/(app)/bookings',
+    },
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary.default} />
+
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.greeting}>Buenos días</Text>
-            <Text style={styles.userName}>Estudiante Unisabana</Text>
+          <Image source={require('@/assets/icon.png')} style={styles.avatar} />
+          <View style={styles.branding}>
+            <Text style={styles.brandText}>NEXUS</Text>
           </View>
-          <View style={styles.headerActions}>
-            <Link href="/(app)/notifications" asChild>
-              <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="notifications-outline" size={22} color={colors.primary.contrast} />
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>3</Text>
-                </View>
-              </TouchableOpacity>
-            </Link>
-            <Link href="/(app)/settings" asChild>
-              <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="settings-outline" size={22} color={colors.primary.contrast} />
-              </TouchableOpacity>
-            </Link>
-          </View>
+          <Link href="/(app)/notifications" asChild>
+            <TouchableOpacity style={styles.notifButton}>
+              <Ionicons name="notifications-outline" size={24} color={colors.primary.contrast} />
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>3</Text>
+              </View>
+            </TouchableOpacity>
+          </Link>
         </View>
-
-        <View style={styles.coinsBadge}>
-          <Ionicons name="trophy-outline" size={16} color="#F59E0B" />
-          <Text style={styles.coinsText}>150 Sabana Coins</Text>
-        </View>
+        <Text style={styles.greeting}>{getGreeting()}, Carlos</Text>
+        <Text style={styles.subGreeting}>¿A dónde te diriges hoy?</Text>
       </View>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.searchSection}>
-          <Text style={styles.sectionTitle}>Buscar Viaje</Text>
-          <View style={styles.searchContainer}>
-            <Ionicons name="location-outline" size={20} color={colors.tertiary.default} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="¿Desde dónde sales?"
-              placeholderTextColor={colors.text.muted}
-              value={searchOrigin}
-              onChangeText={setSearchOrigin}
-              onFocus={() => router.push('/(app)/search')}
-            />
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* CTA Card */}
+        <TouchableOpacity
+          style={styles.ctaCard}
+          onPress={() => router.push('/(app)/search')}
+        >
+          <View style={styles.ctaGradient}>
+            <View style={styles.ctaLeft}>
+              <View style={styles.ctaIconBg}>
+                <Ionicons name="search" size={28} color={colors.primary.contrast} />
+              </View>
+              <Text style={styles.ctaTitle}>Buscar trayecto</Text>
+              <Text style={styles.ctaSubtitle}>Encuentra tu próximo viaje</Text>
+            </View>
+            <View style={styles.ctaRight}>
+              <Ionicons name="car-sport" size={64} color={colors.primary.contrast + '40'} />
+            </View>
           </View>
-          <View style={[styles.searchContainer, styles.destContainer]}>
-            <Ionicons name="flag-outline" size={20} color={colors.secondary.default} />
-            <TextInput
-              style={styles.searchInput}
-              value={searchDest}
-              editable={false}
-            />
+        </TouchableOpacity>
+
+        {/* Quick Actions Grid */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Accesos rápidos</Text>
+          <View style={styles.grid}>
+            {quickActions.map((action, i) => (
+              <Link href={action.href as any} key={i} asChild>
+                <TouchableOpacity style={styles.gridCard}>
+                  <View style={[styles.gridIcon, { backgroundColor: action.bg }]}>
+                    <Ionicons name={action.icon as any} size={22} color={action.color} />
+                  </View>
+                  <Text style={styles.gridText}>{action.title}</Text>
+                </TouchableOpacity>
+              </Link>
+            ))}
           </View>
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={() => router.push('/(app)/search')}
-          >
-            <Ionicons name="search" size={18} color={colors.primary.contrast} />
-            <Text style={styles.searchButtonText}>Buscar viajes disponibles</Text>
-          </TouchableOpacity>
         </View>
 
+        {/* Rutas frecuentes */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Viajes Disponibles Hoy</Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/search')}>
-              <Text style={styles.seeAllText}>Ver todos</Text>
+            <Text style={styles.sectionTitle}>Rutas frecuentes</Text>
+            <TouchableOpacity onPress={() => router.push('/(app)/bookings')}>
+              <Text style={styles.seeAll}>Ver todas</Text>
             </TouchableOpacity>
           </View>
           <FlatList
-            data={MOCK_TRIPS}
+            data={MOCK_FREQUENT_ROUTES}
+            renderItem={renderFrequentRoute}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.routeList}
+          />
+        </View>
+
+        {/* Viajes disponibles */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Viajes disponibles hoy</Text>
+            <TouchableOpacity onPress={() => router.push('/(app)/search')}>
+              <Text style={styles.seeAll}>Ver todos</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={MOCK_AVAILABLE_TRIPS}
             renderItem={renderTripCard}
             keyExtractor={(item) => item.id}
-            horizontal={false}
             scrollEnabled={false}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         </View>
 
-        <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
-          <View style={styles.actionsGrid}>
-            <Link href="/(app)/publish" asChild>
-              <TouchableOpacity style={styles.actionCard}>
-                <View style={[styles.actionIcon, { backgroundColor: colors.tertiary.default + '20' }]}>
-                  <Ionicons name="car-sport" size={24} color={colors.tertiary.default} />
-                </View>
-                <Text style={styles.actionText}>Publicar Viaje</Text>
-              </TouchableOpacity>
-            </Link>
-            <Link href="/(app)/bookings" asChild>
-              <TouchableOpacity style={styles.actionCard}>
-                <View style={[styles.actionIcon, { backgroundColor: colors.secondary.default + '20' }]}>
-                  <Ionicons name="calendar-outline" size={24} color={colors.secondary.default} />
-                </View>
-                <Text style={styles.actionText}>Mis Reservas</Text>
-              </TouchableOpacity>
-            </Link>
-            <Link href="/(app)/payments" asChild>
-              <TouchableOpacity style={styles.actionCard}>
-                <View style={[styles.actionIcon, { backgroundColor: '#F59E0B20' }]}>
-                  <Ionicons name="card-outline" size={24} color="#F59E0B" />
-                </View>
-                <Text style={styles.actionText}>Métodos de Pago</Text>
-              </TouchableOpacity>
-            </Link>
-            <Link href="/(app)/help" asChild>
-              <TouchableOpacity style={styles.actionCard}>
-                <View style={[styles.actionIcon, { backgroundColor: '#EC489920' }]}>
-                  <Ionicons name="help-circle-outline" size={24} color="#EC4899" />
-                </View>
-                <Text style={styles.actionText}>Centro de Ayuda</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </View>
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </SafeAreaView>
@@ -262,75 +282,110 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.primary.default,
     paddingHorizontal: spacing.lg,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.md : spacing.md,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.lg : spacing.lg,
     paddingBottom: spacing.lg,
   },
   headerTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  greeting: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary.contrast + 'CC',
-    fontFamily: typography.family.regular,
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
   },
-  userName: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
+  branding: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  brandText: {
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.extrabold,
     color: colors.primary.contrast,
     fontFamily: typography.family.bold,
+    letterSpacing: 2,
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  iconButton: {
+  notifButton: {
     position: 'relative',
     padding: spacing.sm,
   },
-  badge: {
+  notifBadge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
+    top: 4,
+    right: 4,
     backgroundColor: colors.status.error,
     borderRadius: borderRadius.full,
     minWidth: 16,
     height: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
   },
-  badgeText: {
-    fontSize: 10,
+  notifBadgeText: {
+    fontSize: 9,
     fontWeight: typography.weights.bold,
     color: colors.primary.contrast,
   },
-  coinsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary.light,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    alignSelf: 'flex-start',
+  greeting: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.primary.contrast,
+    fontFamily: typography.family.bold,
   },
-  coinsText: {
-    fontSize: typography.sizes.sm,
-    color: '#F59E0B',
-    marginLeft: spacing.xs,
-    fontFamily: typography.family.semibold,
+  subGreeting: {
+    fontSize: typography.sizes.md,
+    color: colors.primary.contrast + 'AA',
+    fontFamily: typography.family.regular,
+    marginTop: spacing.xs,
   },
   content: {
     flex: 1,
   },
-  searchSection: {
+  ctaCard: {
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.lg,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    ...shadow.lg,
+  },
+  ctaGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    minHeight: 120,
+    backgroundColor: colors.primary.default,
+  },
+  ctaLeft: {
+    flex: 1,
+  },
+  ctaIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary.contrast + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  ctaTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.primary.contrast,
+    fontFamily: typography.family.bold,
+  },
+  ctaSubtitle: {
+    fontSize: typography.sizes.md,
+    color: colors.primary.contrast + 'CC',
+    fontFamily: typography.family.regular,
+    marginTop: spacing.xs,
+  },
+  ctaRight: {
+    alignItems: 'flex-end',
+  },
+  section: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.background.card,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
     fontSize: typography.sizes.lg,
@@ -339,64 +394,91 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     fontFamily: typography.family.bold,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background.default,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  destContainer: {
-    opacity: 0.8,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: spacing.sm,
-    fontSize: typography.sizes.md,
-    color: colors.text.primary,
-    fontFamily: typography.family.regular,
-  },
-  searchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.secondary.default,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md,
-    marginTop: spacing.sm,
-  },
-  searchButtonText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary.contrast,
-    marginLeft: spacing.sm,
-    fontFamily: typography.family.semibold,
-  },
-  section: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  seeAllText: {
+  seeAll: {
     fontSize: typography.sizes.sm,
     color: colors.secondary.default,
-    fontWeight: typography.weights.medium,
-    fontFamily: typography.family.medium,
+    fontWeight: typography.weights.semibold,
+    fontFamily: typography.family.semibold,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  gridCard: {
+    width: (width - spacing.lg * 2 - spacing.md) / 2,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadow.sm,
+  },
+  gridIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  gridText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.text.primary,
+    fontFamily: typography.family.semibold,
+  },
+  routeList: {
+    gap: spacing.sm,
+  },
+  routeCard: {
+    width: width * 0.7,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+    ...shadow.sm,
+  },
+  routeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.default + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  routeInfo: {
+    flex: 1,
+  },
+  routeName: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text.primary,
+    fontFamily: typography.family.semibold,
+  },
+  routeMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  routeTime: {
+    fontSize: typography.sizes.xs,
+    color: colors.text.muted,
+    marginLeft: spacing.xs,
+    fontFamily: typography.family.regular,
   },
   tripCard: {
     backgroundColor: colors.background.card,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    ...shadow.md,
+    ...shadow.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -409,8 +491,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   driverAvatar: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: borderRadius.full,
     backgroundColor: colors.secondary.default,
     justifyContent: 'center',
@@ -418,7 +500,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   avatarText: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
     color: colors.primary.contrast,
     fontFamily: typography.family.bold,
@@ -443,7 +525,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
   },
   ratingText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold,
     color: '#92400E',
     marginLeft: spacing.xs,
@@ -465,15 +547,15 @@ const styles = StyleSheet.create({
   },
   routeLine: {
     width: 1,
-    height: 16,
+    height: 14,
     backgroundColor: colors.border.default,
-    marginLeft: 8,
+    marginLeft: 7,
     marginVertical: spacing.xs,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    alignItems: 'center',
   },
   tripDetails: {
     flexDirection: 'row',
@@ -485,62 +567,13 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
     fontFamily: typography.family.regular,
   },
-  cardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   priceText: {
-    fontSize: typography.sizes.xl,
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.tertiary.default,
     fontFamily: typography.family.bold,
   },
-  bookButton: {
-    backgroundColor: colors.secondary.default,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-  },
-  bookButtonText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary.contrast,
-    fontFamily: typography.family.semibold,
-  },
   separator: {
     height: spacing.md,
-  },
-  quickActions: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  actionCard: {
-    width: '47%',
-    backgroundColor: colors.background.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    alignItems: 'center',
-    ...shadow.sm,
-  },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  actionText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.text.primary,
-    textAlign: 'center',
-    fontFamily: typography.family.medium,
   },
 });
