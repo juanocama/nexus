@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { getItemAsync, setItemAsync, deleteItemAsync, TOKEN_KEY, USER_KEY } from '@/utils/storage';
 
 interface User {
   id: string;
@@ -38,9 +38,6 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
 });
 
-const TOKEN_KEY = 'nexus_auth_token';
-const USER_KEY = 'nexus_auth_user';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -52,8 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadStoredAuth = async () => {
     try {
-      const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
-      const storedUser = await SecureStore.getItemAsync(USER_KEY);
+      const storedToken = await getItemAsync(TOKEN_KEY);
+      const storedUser = await getItemAsync(USER_KEY);
 
       if (storedToken && storedUser) {
         setToken(storedToken);
@@ -80,19 +77,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       status: userFields.status,
     };
 
-    await SecureStore.setItemAsync(TOKEN_KEY, String(accessToken));
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
+    await setItemAsync(TOKEN_KEY, String(accessToken));
+    await setItemAsync(USER_KEY, JSON.stringify(userData));
     setToken(String(accessToken));
     setUser(userData);
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-    } catch {}
-    try {
-      await SecureStore.deleteItemAsync(USER_KEY);
-    } catch {}
+    await deleteItemAsync(TOKEN_KEY);
+    await deleteItemAsync(USER_KEY);
     setToken(null);
     setUser(null);
   }, []);

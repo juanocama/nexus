@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
@@ -18,6 +17,7 @@ import { colors, borderRadius, typography, spacing } from '@/theme/colors';
 import { validateInstitutionalEmail } from '@/utils/config';
 import { apiClient } from '@/api/auth';
 import { useAuth } from '@/context/AuthContext';
+import { showAlert } from '@/utils/alert';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -32,17 +32,17 @@ export default function LoginScreen() {
     setErrors({});
 
     if (!email.trim()) {
-      setErrors({ email: 'Email is required' });
+      setErrors({ email: 'Email requerido' });
       return;
     }
 
     if (!validateInstitutionalEmail(email)) {
-      setErrors({ email: 'Use your @unisabana.edu.co email' });
+      setErrors({ email: 'Usa tu correo @unisabana.edu.co' });
       return;
     }
 
     if (!password.trim()) {
-      setErrors({ password: 'Password is required' });
+      setErrors({ password: 'Contraseña requerida' });
       return;
     }
 
@@ -52,8 +52,8 @@ export default function LoginScreen() {
       await login(response);
       router.replace('/(app)/home');
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Login failed';
-      Alert.alert('Error de Login', message);
+      const message = error instanceof Error ? error.message : 'Error al iniciar sesión';
+      showAlert('Error de Login', message);
     } finally {
       setLoading(false);
     }
@@ -155,7 +155,7 @@ export default function LoginScreen() {
 
             <LoginButton
               title="Continuar con Microsoft 365 (Próximamente)"
-              onPress={() => Alert.alert('Próximamente', 'La autenticación con Microsoft estará disponible pronto')}
+              onPress={() => showAlert('Próximamente', 'La autenticación con Microsoft estará disponible pronto')}
               loading={false}
               variant="microsoft"
               style={styles.microsoftButton}

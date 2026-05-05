@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
@@ -18,6 +17,7 @@ import { colors, borderRadius, typography, spacing } from '@/theme/colors';
 import { validateInstitutionalEmail } from '@/utils/config';
 import { apiClient } from '@/api/auth';
 import { useAuth } from '@/context/AuthContext';
+import { showAlert } from '@/utils/alert';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -74,14 +74,14 @@ export default function RegisterScreen() {
       });
 
       await login(response);
-      Alert.alert(
+      showAlert(
         'Registro exitoso',
         'Tu cuenta ha sido creada correctamente',
         [{ text: 'OK', onPress: () => router.replace('/(app)/home') }]
       );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Error en el registro';
-      Alert.alert('Error', message.includes('already exists') ? 'Este correo ya está registrado' : message);
+      showAlert('Error', message.includes('already exists') ? 'Este correo ya está registrado' : message);
     } finally {
       setLoading(false);
     }
