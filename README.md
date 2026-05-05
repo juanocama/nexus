@@ -9,7 +9,7 @@ Aplicación de carpooling para la Universidad de La Sabana. Conecta estudiantes 
 | **Backend** | NestJS + TypeORM + PostgreSQL |
 | **Frontend** | React Native + Expo |
 | **Autenticación** | JWT + Microsoft OAuth (pendiente) |
-| **Base de datos** | PostgreSQL 14+ |
+| **Base de datos** | PostgreSQL 16 |
 
 ## Estructura del Proyecto
 
