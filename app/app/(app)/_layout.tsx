@@ -68,6 +68,36 @@ export default function AppLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="bookings"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="help"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

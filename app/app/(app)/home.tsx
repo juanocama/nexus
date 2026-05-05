@@ -16,6 +16,7 @@ import {
 import { useRouter, Link } from 'expo-router';
 import { colors, borderRadius, typography, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
+import HeaderMenu from '@/components/HeaderMenu';
 
 const { width } = Dimensions.get('window');
 
@@ -191,6 +192,7 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
           </Link>
+          <HeaderMenu />
         </View>
         <Text style={styles.greeting}>{getGreeting()}, Carlos</Text>
         <Text style={styles.subGreeting}>¿A dónde te diriges hoy?</Text>

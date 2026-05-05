@@ -14,6 +14,57 @@ import { useRouter } from 'expo-router';
 import { colors, borderRadius, typography, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 
+const MOCK_NOTIFICATIONS = [
+  {
+    id: '1',
+    type: 'booking_confirmed',
+    title: 'Reserva Confirmada',
+    message: 'Tu reserva para el viaje de Carlos Martínez ha sido confirmada.',
+    is_read: false,
+    created_at: 'Hace 5 min',
+  },
+  {
+    id: '2',
+    type: 'sabana_coins_earned',
+    title: 'Sabana Coins Ganados',
+    message: '¡Ganaste 25 Sabana Coins por tu último viaje completado!',
+    is_read: false,
+    created_at: 'Hace 1 hora',
+  },
+  {
+    id: '3',
+    type: 'rating_received',
+    title: 'Nueva Calificación',
+    message: 'Carlos te calificó con 5 estrellas. ¡Excelente!',
+    is_read: false,
+    created_at: 'Hace 2 horas',
+  },
+  {
+    id: '4',
+    type: 'payment_received',
+    title: 'Pago Recibido',
+    message: 'Se ha procesado tu pago de $8.000 para el viaje del 3 de mayo.',
+    is_read: true,
+    created_at: 'Ayer',
+  },
+  {
+    id: '5',
+    type: 'trip_modified',
+    title: 'Viaje Modificado',
+    message: 'El conductor María López modificó el punto de encuentro de tu viaje.',
+    is_read: true,
+    created_at: 'Hace 2 días',
+  },
+  {
+    id: '6',
+    type: 'booking_cancelled',
+    title: 'Reserva Cancelada',
+    message: 'Tu reserva para el viaje del 28 de abril ha sido cancelada.',
+    is_read: true,
+    created_at: 'Hace 3 días',
+  },
+];
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
@@ -117,42 +168,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     color: colors.primary.contrast,
     fontFamily: typography.family.semibold,
-  },
-  markReadText: {
-    fontSize: typography.sizes.sm,
-    color: colors.secondary.light,
-    fontFamily: typography.family.medium,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  headerBrand: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.primary.contrast,
-    fontFamily: typography.family.bold,
-    letterSpacing: 2,
-  },
-  avatarSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.default,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerAvatarText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.primary.contrast,
-    fontFamily: typography.family.bold,
   },
   markReadText: {
     fontSize: typography.sizes.sm,

@@ -15,6 +15,7 @@ import {
 import { useRouter, Link } from 'expo-router';
 import { colors, borderRadius, typography, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
+import HeaderMenu from '@/components/HeaderMenu';
 
 const MOCK_RESULTS = [
   {
@@ -176,6 +177,7 @@ export default function SearchScreen() {
             <Ionicons name="notifications-outline" size={24} color={colors.primary.contrast} />
             <View style={styles.badge} />
           </TouchableOpacity>
+          <HeaderMenu />
         </View>
       </View>
 

@@ -15,6 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import { colors, borderRadius, typography, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
+import HeaderMenu from '@/components/HeaderMenu';
 
 export default function PublishTripScreen() {
   const router = useRouter();
@@ -92,6 +93,7 @@ export default function PublishTripScreen() {
             <Ionicons name="notifications-outline" size={24} color={colors.primary.contrast} />
             <View style={styles.badge} />
           </TouchableOpacity>
+          <HeaderMenu />
         </View>
       </View>
 
