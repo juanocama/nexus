@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 
@@ -24,5 +25,6 @@ export class UserRole {
   created_at: Date;
 
   @ManyToOne(() => User, (user) => user.user_roles, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 }

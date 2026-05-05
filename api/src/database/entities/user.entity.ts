@@ -12,10 +12,9 @@ import { Booking } from './booking.entity';
 import { Review } from './review.entity';
 import { Notification } from './notification.entity';
 import { SabanaCoinsLedger } from './sabana-coins-ledger.entity';
-import { UserRole } from './user-role.entity';
+import { UserRole as UserRoleEntity } from './user-role.entity';
 
 export type UserStatus = 'active' | 'suspended' | 'deactivated';
-export type UserRole = 'driver' | 'passenger';
 
 @Entity('users')
 export class User {
@@ -86,6 +85,6 @@ export class User {
   @OneToMany(() => SabanaCoinsLedger, (ledger) => ledger.user)
   sabana_coins_ledger: SabanaCoinsLedger[];
 
-  @OneToMany(() => UserRole, (userRole) => userRole.user, { cascade: true })
-  user_roles: UserRole[];
+  @OneToMany(() => UserRoleEntity, (userRole) => userRole.user, { cascade: true })
+  user_roles: UserRoleEntity[];
 }

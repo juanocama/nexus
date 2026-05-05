@@ -18,7 +18,7 @@ export class RegisterDto {
   @IsString()
   @MinLength(8)
   @Matches(/^(?=.*[A-Z])(?=.*\d)/, {
-    message: 'Password must contain at least one uppercase letter and one number',
+    message: 'Contraseña debe contener al menos una letra mayúscula y un número',
   })
   @IsNotEmpty()
   password: string;
@@ -32,7 +32,7 @@ export class RegisterDto {
   phone?: string;
 
   @ApiProperty({
-    description: 'Roles for the user: driver, passenger, or both',
+    description: 'Roles para el usuario: driver, passenger, or both',
     example: ['driver', 'passenger'],
     isArray: true,
   })
