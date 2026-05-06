@@ -50,7 +50,7 @@ export default function TripDetailScreen() {
           text: 'Confirmar',
           onPress: () => {
             Alert.alert('Éxito', 'Tu reserva ha sido creada exitosamente');
-            router.replace('/(app)/bookings');
+            router.replace('/bookings');
           },
         },
       ]
@@ -58,7 +58,7 @@ export default function TripDetailScreen() {
   };
 
   const handleReport = () => {
-    router.push(`/(app)/report/${trip.id}`);
+    router.push(`/report/${trip.id}`);
   };
 
   return (

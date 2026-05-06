@@ -110,7 +110,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Opciones</Text>
           <View style={styles.card}>
-            <Link href="/(app)/bookings" asChild>
+            <Link href="/bookings" asChild>
               <TouchableOpacity style={styles.optionRow}>
                 <View style={styles.optionLeft}>
                   <Ionicons name="car-outline" size={20} color={colors.secondary.default} />
@@ -120,7 +120,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </Link>
             <View style={styles.optionDivider} />
-            <Link href="/(app)/payments" asChild>
+            <Link href="/payments" asChild>
               <TouchableOpacity style={styles.optionRow}>
                 <View style={styles.optionLeft}>
                   <Ionicons name="card-outline" size={20} color={colors.secondary.default} />
@@ -130,7 +130,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </Link>
             <View style={styles.optionDivider} />
-            <Link href="/(app)/notifications" asChild>
+            <Link href="/notifications" asChild>
               <TouchableOpacity style={styles.optionRow}>
                 <View style={styles.optionLeft}>
                   <Ionicons name="notifications-outline" size={20} color={colors.secondary.default} />
@@ -140,7 +140,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </Link>
             <View style={styles.optionDivider} />
-            <Link href="/(app)/help" asChild>
+            <Link href="/help" asChild>
               <TouchableOpacity style={styles.optionRow}>
                 <View style={styles.optionLeft}>
                   <Ionicons name="help-circle-outline" size={20} color={colors.secondary.default} />
@@ -150,7 +150,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </Link>
             <View style={styles.optionDivider} />
-            <Link href="/(app)/settings" asChild>
+            <Link href="/settings" asChild>
               <TouchableOpacity style={styles.optionRow}>
                 <View style={styles.optionLeft}>
                   <Ionicons name="settings-outline" size={20} color={colors.secondary.default} />

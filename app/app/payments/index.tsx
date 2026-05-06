@@ -64,7 +64,7 @@ export default function PaymentsScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.primary.contrast} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Métodos de Pago</Text>
-        <TouchableOpacity onPress={() => router.push('/(app)/payments/add-card')}>
+        <TouchableOpacity onPress={() => router.push('/payments/add-card')}>
           <Ionicons name="add" size={24} color={colors.primary.contrast} />
         </TouchableOpacity>
       </View>
@@ -147,7 +147,7 @@ export default function PaymentsScreen() {
               </View>
             ))}
 
-            <Link href="/(app)/payments/add-card" asChild>
+            <Link href="/payments/add-card" asChild>
               <TouchableOpacity style={styles.addCardButton}>
                 <Ionicons name="add-circle-outline" size={24} color={colors.secondary.default} />
                 <Text style={styles.addCardText}>Agregar Nueva Tarjeta</Text>

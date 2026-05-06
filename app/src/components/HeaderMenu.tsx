@@ -14,12 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius, typography, spacing, shadow } from '@/theme/colors';
 
 const MENU_ITEMS = [
-  { icon: 'car-outline', label: 'Mis Viajes', route: '/(app)/bookings' },
-  { icon: 'notifications-outline', label: 'Notificaciones', route: '/(app)/notifications' },
-  { icon: 'card-outline', label: 'Métodos de Pago', route: '/(app)/payments' },
-  { icon: 'document-text-outline', label: 'Reportes', route: '/(app)/report' },
-  { icon: 'help-circle-outline', label: 'Centro de Ayuda', route: '/(app)/help' },
-  { icon: 'settings-outline', label: 'Configuración', route: '/(app)/settings' },
+  { icon: 'car-outline', label: 'Mis Viajes', route: '/bookings' },
+  { icon: 'notifications-outline', label: 'Notificaciones', route: '/notifications' },
+  { icon: 'card-outline', label: 'Métodos de Pago', route: '/payments' },
+  { icon: 'document-text-outline', label: 'Reportes', route: '/report' },
+  { icon: 'help-circle-outline', label: 'Centro de Ayuda', route: '/help' },
+  { icon: 'settings-outline', label: 'Configuración', route: '/settings' },
 ];
 
 export default function HeaderMenu() {

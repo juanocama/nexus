@@ -41,7 +41,7 @@ export default function ReportScreen() {
       'Reporte Enviado',
       'Tu reporte ha sido recibido. Nuestro equipo lo revisará y tomará las acciones necesarias.',
       [
-        { text: 'OK', onPress: () => router.replace('/(app)/home') },
+        { text: 'OK', onPress: () => router.replace('/(tabs)/home') },
       ]
     );
   };

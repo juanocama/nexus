@@ -84,7 +84,7 @@ export default function RegisterScreen() {
       showAlert(
         'Registro exitoso',
         'Tu cuenta ha sido creada correctamente',
-        [{ text: 'OK', onPress: () => router.replace('/(app)/home') }]
+        [{ text: 'OK', onPress: () => router.replace('/(tabs)/home') }]
       );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Error en el registro';

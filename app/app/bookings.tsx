@@ -84,7 +84,7 @@ export default function BookingsScreen() {
     const statusStyle = getStatusColor(item.status);
 
     return (
-      <Link href={`/(app)/trip/${item.id}`} asChild>
+      <Link href={`/trip/${item.id}`} asChild>
         <TouchableOpacity style={styles.bookingCard}>
           <View style={styles.cardHeader}>
             <View style={styles.statusBadge}>
@@ -199,7 +199,7 @@ export default function BookingsScreen() {
             {activeTab === 'upcoming' && (
               <TouchableOpacity
                 style={styles.emptyButton}
-                onPress={() => router.push('/(app)/search')}
+                onPress={() => router.push('/search')}
               >
                 <Text style={styles.emptyButtonText}>Buscar Viajes</Text>
               </TouchableOpacity>

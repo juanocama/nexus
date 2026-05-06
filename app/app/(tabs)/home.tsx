@@ -99,7 +99,7 @@ export default function HomeScreen() {
   );
 
   const renderTripCard = ({ item }: { item: typeof MOCK_AVAILABLE_TRIPS[0] }) => (
-    <Link href={`/(app)/trip/${item.id}`} asChild>
+    <Link href={`/trip/${item.id}`} asChild>
       <TouchableOpacity style={styles.tripCard}>
         <View style={styles.cardHeader}>
           <View style={styles.driverInfo}>
@@ -148,28 +148,28 @@ export default function HomeScreen() {
       icon: 'add',
       color: colors.tertiary.default,
       bg: colors.tertiary.default + '20',
-      href: '/(app)/publish',
+      href: '/(tabs)/publish',
     },
     {
       title: 'Mis reservas',
       icon: 'checkmark-circle',
       color: colors.secondary.default,
       bg: colors.secondary.default + '20',
-      href: '/(app)/bookings',
+      href: '/bookings',
     },
     {
       title: 'Mis viajes',
       icon: 'car-sport',
       color: '#6366F1',
       bg: '#6366F120',
-      href: '/(app)/bookings',
+      href: '/bookings',
     },
     {
       title: 'Mis publicaciones',
       icon: 'document-text',
       color: '#F59E0B',
       bg: '#F59E0B20',
-      href: '/(app)/bookings',
+      href: '/bookings',
     },
   ];
 
@@ -184,7 +184,7 @@ export default function HomeScreen() {
           <View style={styles.branding}>
             <Text style={styles.brandText}>NEXUS</Text>
           </View>
-          <Link href="/(app)/notifications" asChild>
+          <Link href="/notifications" asChild>
             <TouchableOpacity style={styles.notifButton}>
               <Ionicons name="notifications-outline" size={24} color={colors.primary.contrast} />
               <View style={styles.notifBadge}>
@@ -202,7 +202,7 @@ export default function HomeScreen() {
         {/* CTA Card */}
         <TouchableOpacity
           style={styles.ctaCard}
-          onPress={() => router.push('/(app)/search')}
+          onPress={() => router.push('/search')}
         >
           <View style={styles.ctaGradient}>
             <View style={styles.ctaLeft}>
@@ -239,7 +239,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Rutas frecuentes</Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/bookings')}>
+            <TouchableOpacity onPress={() => router.push('/bookings')}>
               <Text style={styles.seeAll}>Ver todas</Text>
             </TouchableOpacity>
           </View>
@@ -257,7 +257,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Viajes disponibles hoy</Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/search')}>
+            <TouchableOpacity onPress={() => router.push('/search')}>
               <Text style={styles.seeAll}>Ver todos</Text>
             </TouchableOpacity>
           </View>

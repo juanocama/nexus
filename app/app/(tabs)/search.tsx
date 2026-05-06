@@ -103,7 +103,7 @@ export default function SearchScreen() {
   };
 
   const handleBookTrip = (tripId: string) => {
-    router.push(`/(app)/trip/${tripId}`);
+    router.push(`/trip/${tripId}`);
   };
 
   const renderTripCard = ({ item }: { item: typeof MOCK_RESULTS[0] }) => (

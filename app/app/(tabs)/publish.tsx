@@ -47,7 +47,7 @@ export default function PublishTripScreen() {
           text: 'Publicar',
           onPress: () => {
             Alert.alert('Éxito', 'Tu viaje ha sido publicado');
-            router.replace('/(app)/home');
+            router.replace('/(tabs)/home');
           },
         },
       ]

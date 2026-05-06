@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import { colors, spacing, typography } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function AppLayout() {
+export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -66,36 +66,6 @@ export default function AppLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="bookings"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="help"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          href: null,
         }}
       />
     </Tabs>

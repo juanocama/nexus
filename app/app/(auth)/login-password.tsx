@@ -37,7 +37,7 @@ export default function LoginPasswordScreen() {
     try {
       setLoading(true);
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      router.replace('/(app)/home');
+      router.replace('/(tabs)/home');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Login failed';
       Alert.alert('Error', message);

@@ -51,7 +51,7 @@ export default function LoginScreen() {
       setLoading(true);
       const response = await apiClient.login(email.toLowerCase(), password);
       await login(response);
-      router.replace('/(app)/home');
+      router.replace('/(tabs)/home');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Error al iniciar sesión';
       showAlert('Error de Login', message);
