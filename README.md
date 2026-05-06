@@ -30,7 +30,7 @@ Aplicación de carpooling para la Universidad de La Sabana. Conecta estudiantes 
 ## Requisitos Previos
 
 - **Node.js** >= 18.x
-- **PostgreSQL** >= 14.x
+- **PostgreSQL** >= 16.x
 - **npm** >= 9.x
 - Para ejecutar la app móvil: **Expo Go** en tu dispositivo o un emulador
 
