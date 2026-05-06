@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
-  StatusBar,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { borderRadius, spacing, shadow, colors, typography } from '@/theme/colors';
+import { borderRadius, spacing, shadow, typography } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/useTheme';
+import PageHeader from '@/components/PageHeader';
 
 export default function HelpScreen() {
   const router = useRouter();
@@ -48,13 +47,7 @@ export default function HelpScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
-      <View style={[styles.header, { backgroundColor: colors.primary.default }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary.contrast} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.primary.contrast, fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{t.help.title}</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <PageHeader title={t.help.title} />
 
       <ScrollView style={styles.content}>
         <View style={[styles.contactCard, { backgroundColor: colors.secondary.default + '10', borderRadius: borderRadius.lg, padding: spacing.lg, marginHorizontal: spacing.lg, marginTop: spacing.lg, marginBottom: spacing.lg, alignItems: 'center' }]}>
@@ -127,16 +120,6 @@ export default function HelpScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.md : spacing.md,
-    paddingBottom: spacing.md,
-  },
-  backButton: { padding: spacing.xs },
-  headerTitle: {},
   content: { flex: 1 },
   contactCard: {},
   contactTitle: {},

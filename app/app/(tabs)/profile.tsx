@@ -6,14 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Image,
-  StatusBar,
-  Platform,
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
-import { borderRadius, spacing, shadow, colors } from '@/theme/colors';
+import { borderRadius, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
-import HeaderMenu from '@/components/HeaderMenu';
+import TabHeader from '@/components/TabHeader';
 import { useTheme } from '@/hooks/useTheme';
 
 export default function ProfileScreen() {
@@ -35,21 +32,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
-      <View style={[styles.header, { backgroundColor: colors.primary.default }]}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.avatarSmall, { backgroundColor: colors.secondary.default }]}>
-            <Text style={[styles.avatarText, { fontSize: typography.sizes.md, fontWeight: typography.weights.bold, fontFamily: typography.family.bold, color: colors.primary.contrast }]}>{mockUser.name.charAt(0)}</Text>
-          </View>
-          <Text style={[styles.headerBrand, { fontSize: typography.sizes.xxl, fontWeight: typography.weights.extrabold, fontFamily: typography.family.extrabold, letterSpacing: 2, color: colors.primary.contrast }]}>NEXUS</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerIconBtn}>
-            <Ionicons name="notifications-outline" size={24} color={colors.primary.contrast} />
-            <View style={[styles.badge, { backgroundColor: colors.status.error }]} />
-          </TouchableOpacity>
-          <HeaderMenu />
-        </View>
-      </View>
+      <TabHeader />
 
       <ScrollView style={styles.content}>
         <View style={[styles.profileSection, { backgroundColor: colors.background.card }]}>
@@ -176,21 +159,6 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.md : spacing.md,
-    paddingBottom: spacing.md,
-  },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  headerBrand: { letterSpacing: 2 },
-  avatarSmall: { width: 36, height: 36, borderRadius: borderRadius.full, justifyContent: 'center', alignItems: 'center' },
-  avatarText: {},
-  headerIconBtn: { padding: spacing.sm, position: 'relative' },
-  badge: { position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: borderRadius.full },
   content: { flex: 1 },
   profileSection: {
     alignItems: 'center',

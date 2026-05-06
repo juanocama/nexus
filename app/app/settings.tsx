@@ -6,13 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  StatusBar,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/useTheme';
+import PageHeader from '@/components/PageHeader';
 
 type SettingItem = {
   id: string;
@@ -123,14 +122,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
-      <StatusBar barStyle={theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.primary.default} />
-      <View style={[styles.header, { backgroundColor: colors.primary.default }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary.contrast} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{s.title}</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <PageHeader title={s.title} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {items.map((section) => (
@@ -144,9 +136,6 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: Platform.OS === 'android' ? 32 : 16, paddingBottom: 16 },
-  backButton: { padding: 4 },
-  headerTitle: { color: '#FFFFFF' },
   content: { flex: 1 },
   section: {},
   sectionTitle: { marginBottom: 8 },

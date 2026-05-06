@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   FlatList,
-  StatusBar,
-  Platform,
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
-import { borderRadius, spacing, shadow, colors } from '@/theme/colors';
+import { borderRadius, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useSettings } from '@/context/SettingsContext';
+import PageHeader from '@/components/PageHeader';
 
 const MOCK_BOOKINGS = [
   {
@@ -154,13 +153,7 @@ export default function BookingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
-      <View style={[styles.header, { backgroundColor: colors.primary.default }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary.contrast} />
-        </TouchableOpacity>
-        <Text style={{ color: colors.primary.contrast, fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }}>{t.bookings.title}</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <PageHeader title={t.bookings.title} />
 
       <View style={[styles.tabContainer, { backgroundColor: colors.background.card, borderBottomColor: colors.border.default }]}>
         <TouchableOpacity
@@ -224,16 +217,6 @@ export default function BookingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.md : spacing.md,
-    paddingBottom: spacing.md,
-  },
-  backButton: { padding: spacing.xs },
-  headerTitle: {},
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,

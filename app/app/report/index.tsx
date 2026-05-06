@@ -6,14 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  StatusBar,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { borderRadius, spacing, shadow, colors } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/useTheme';
+import PageHeader from '@/components/PageHeader';
 
 const MOCK_RECENT_TRIPS = [
   {
@@ -72,13 +71,7 @@ export default function ReportsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
-      <View style={[styles.header, { backgroundColor: colors.primary.default }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary.contrast} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.primary.contrast, fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{a.title}</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <PageHeader title={a.title} />
 
       <ScrollView style={styles.content}>
         <View style={[styles.infoCard, { backgroundColor: colors.secondary.default + '15', borderRadius: borderRadius.lg, padding: spacing.md, marginHorizontal: spacing.lg, marginTop: spacing.lg }]}>
@@ -160,16 +153,6 @@ export default function ReportsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.md : spacing.md,
-    paddingBottom: spacing.md,
-  },
-  backButton: { padding: spacing.xs },
-  headerTitle: {},
   content: { flex: 1 },
   infoCard: {},
   infoText: {},

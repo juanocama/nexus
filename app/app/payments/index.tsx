@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
-  StatusBar,
-  Platform,
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { borderRadius, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/useTheme';
+import PageHeader from '@/components/PageHeader';
 
 const MOCK_CARDS = [
   { id: '1', last_four: '4242', brand: 'Visa', exp_month: 12, exp_year: 2027, is_default: true },
@@ -48,17 +47,14 @@ export default function PaymentsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primary.default} />
-
-      <View style={[styles.header, { backgroundColor: colors.primary.default }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary.contrast} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold, color: colors.primary.contrast }]}>{p.title}</Text>
-        <TouchableOpacity onPress={() => router.push('/payments/add-card')}>
-          <Ionicons name="add" size={24} color={colors.primary.contrast} />
-        </TouchableOpacity>
-      </View>
+      <PageHeader
+        title={p.title}
+        rightAction={
+          <TouchableOpacity onPress={() => router.push('/payments/add-card')}>
+            <Ionicons name="add" size={24} color={colors.primary.contrast} />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={[styles.coinsBanner, { backgroundColor: '#FEF3C7', marginHorizontal: spacing.lg, marginTop: spacing.lg, borderRadius: borderRadius.lg, padding: spacing.md }]}>
         <View style={[styles.coinsIcon, { width: 48, height: 48, borderRadius: borderRadius.full, backgroundColor: colors.background.card, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md }]}>
@@ -163,16 +159,6 @@ export default function PaymentsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.md : spacing.md,
-    paddingBottom: spacing.md,
-  },
-  backButton: { padding: spacing.xs },
-  headerTitle: {},
   content: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
   coinsBanner: {},
   coinsIcon: {},

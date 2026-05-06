@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   Manrope_400Regular,
   Manrope_500Medium,
@@ -25,18 +26,20 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <SettingsProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: {
-              backgroundColor: colors.background.default,
-            },
-            animation: 'default',
-          }}
-        />
-      </SettingsProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: {
+                backgroundColor: colors.background.default,
+              },
+              animation: 'default',
+            }}
+          />
+        </SettingsProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

@@ -7,16 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  TextInput,
   FlatList,
-  Platform,
-  Image,
   Dimensions,
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
-import HeaderMenu from '@/components/HeaderMenu';
+import TabHeader from '@/components/TabHeader';
 import { useSettings } from '@/context/SettingsContext';
 import { borderRadius, spacing, shadow, colors } from '@/theme/colors';
 
@@ -120,24 +117,10 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary.default} />
 
-      <View style={[styles.header, { backgroundColor: colors.primary.default }]}>
-        <View style={styles.headerTop}>
-          <Image source={require('../../assets/icon.png')} style={styles.avatar} />
-          <View style={styles.branding}>
-            <Text style={[styles.brandText, { color: colors.primary.contrast, fontSize: typography.sizes.xxl, fontWeight: typography.weights.extrabold, fontFamily: typography.family.bold, letterSpacing: 2 }]}>NEXUS</Text>
-          </View>
-          <Link href="/notifications" asChild>
-            <TouchableOpacity style={styles.notifButton}>
-              <Ionicons name="notifications-outline" size={24} color={colors.primary.contrast} />
-              <View style={[styles.notifBadge, { backgroundColor: colors.status.error }]}>
-                 <Text style={[styles.notifBadgeText, { color: colors.primary.contrast, fontSize: 9, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>3</Text>
-              </View>
-            </TouchableOpacity>
-          </Link>
-          <HeaderMenu />
-        </View>
-        <Text style={[styles.greeting, { color: colors.primary.contrast, fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{getGreeting()}, Carlos</Text>
-        <Text style={[styles.subGreeting, { color: colors.primary.contrast + 'AA', fontSize: typography.sizes.md, fontFamily: typography.family.regular }]}>{h.subGreeting}</Text>
+      <TabHeader />
+      <View style={[styles.greetingSection, { backgroundColor: colors.primary.default, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }]}>
+        <Text style={{ color: colors.primary.contrast, fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }}>{getGreeting()}, Carlos</Text>
+        <Text style={{ color: colors.primary.contrast + 'AA', fontSize: typography.sizes.md, fontFamily: typography.family.regular }}>{h.subGreeting}</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -211,20 +194,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.lg : spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
-  avatar: { width: 40, height: 40, borderRadius: borderRadius.full },
-  branding: { flex: 1, alignItems: 'center' },
-  brandText: {},
-  notifButton: { position: 'relative', padding: spacing.sm },
-  notifBadge: { position: 'absolute', top: 4, right: 4, borderRadius: borderRadius.full, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center' },
-  notifBadgeText: {},
-  greeting: { marginTop: spacing.md },
-  subGreeting: { marginTop: spacing.xs },
+  greetingSection: {},
   content: { flex: 1 },
   ctaCard: { marginHorizontal: spacing.lg, marginVertical: spacing.lg, borderRadius: borderRadius.xl, overflow: 'hidden' },
   ctaGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, minHeight: 120 },

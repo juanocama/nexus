@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   FlatList,
-  StatusBar,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { borderRadius, spacing, shadow, colors, typography } from '@/theme/colors';
+import { borderRadius, spacing, shadow, typography } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useSettings } from '@/context/SettingsContext';
+import PageHeader from '@/components/PageHeader';
 
 const MOCK_NOTIFICATIONS = [
   { id: '1', type: 'booking_confirmed', is_read: false, created_at: 'Hace 5 min' },
@@ -96,15 +95,14 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
-      <View style={[styles.header, { backgroundColor: colors.primary.default }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary.contrast} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.primary.contrast, fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{t.notifications.title}</Text>
-        <TouchableOpacity onPress={markAllAsRead}>
-          <Text style={[styles.markReadText, { color: colors.secondary.light, fontSize: typography.sizes.sm, fontFamily: typography.family.medium }]}>{t.notifications.markRead}</Text>
-        </TouchableOpacity>
-      </View>
+      <PageHeader
+        title={t.notifications.title}
+        rightAction={
+          <TouchableOpacity onPress={markAllAsRead}>
+            <Text style={[styles.markReadText, { color: colors.secondary.light, fontSize: typography.sizes.sm, fontFamily: typography.family.medium }]}>{t.notifications.markRead}</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView style={styles.content}>
         {unread > 0 && (
@@ -130,16 +128,6 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + spacing.md : spacing.md,
-    paddingBottom: spacing.md,
-  },
-  backButton: { padding: spacing.xs },
-  headerTitle: {},
   markReadText: {},
   content: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
   unreadBadge: { padding: spacing.sm, borderRadius: borderRadius.md, marginBottom: spacing.md, alignItems: 'center' },
