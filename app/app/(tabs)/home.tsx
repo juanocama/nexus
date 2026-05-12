@@ -120,7 +120,7 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.ratingBadge, { backgroundColor: '#FEF3C7' }]}>
             <Ionicons name="star" size={10} color="#F59E0B" />
-             <Text style={[styles.ratingText, { color: '#92400E', fontSize: typography.sizes.xs, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{item.driver?.average_rating?.toFixed(1) || '0.0'}</Text>
+             <Text style={[styles.ratingText, { color: '#92400E', fontSize: typography.sizes.xs, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{typeof item.driver?.average_rating === 'number' ? item.driver.average_rating.toFixed(1) : '0.0'}</Text>
           </View>
         </View>
         <View style={styles.routeContainer}>
@@ -153,7 +153,7 @@ export default function HomeScreen() {
     { title: h.publishTrip, icon: 'add', color: colors.tertiary.default, bg: colors.tertiary.default + '20', href: '/(tabs)/publish' },
     { title: h.myBookings, icon: 'checkmark-circle', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/bookings' },
     { title: h.myTrips, icon: 'car-sport', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/bookings' },
-    { title: h.myPublications, icon: 'document-text', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/bookings' },
+    { title: h.myPublications, icon: 'document-text', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/my-publications' },
   ];
 
   const displayName = user?.full_name?.split(' ')[0] || 'Carlos';

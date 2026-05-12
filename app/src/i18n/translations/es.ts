@@ -46,7 +46,7 @@ export const es = {
   },
   search: {
     title: 'Buscar Viajes',
-    originPlaceholder: 'Punto de origen',
+    originPlaceholder: 'Origen',
     destinationPlaceholder: 'Destino',
     selectDate: 'Seleccionar fecha',
     findTrips: 'Buscar',
@@ -57,11 +57,11 @@ export const es = {
   },
   publish: {
     route: 'Ruta',
-    origin: 'Punto de Origen *',
+    origin: 'Origen *',
     originPlaceholder: 'Ej: Centro Comercial Fontanar',
     originDetail: 'Detalle del origen',
     originDetailPlaceholder: 'Ej: Entrada principal, parqueadero',
-    destination: 'Punto de Destino *',
+    destination: 'Destino *',
     destinationPlaceholder: 'Ej: Universidad de La Sabana',
     destinationDetail: 'Detalle del destino',
     destinationDetailPlaceholder: 'Ej: Entrada principal, puente',

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Trip } from '../../database/entities/trip.entity';
 import { User } from '../../database/entities/user.entity';
-import { CreateTripDto, SearchTripsDto } from './dto/trip.dto';
+import { CreateTripDto, SearchTripsDto, UpdateTripDto } from './dto/trip.dto';
 
 @Injectable()
 export class TripsService {
@@ -100,5 +100,23 @@ export class TripsService {
 
   async cancelTrip(id: string, userId: string): Promise<Trip> {
     return this.updateStatus(id, 'cancelled', userId);
+  }
+
+  async update(id: string, updateTripDto: UpdateTripDto, userId: string): Promise<Trip> {
+    const trip = await this.findOne(id);
+
+    if (trip.driver.id !== userId) {
+      throw new UnauthorizedException('You can only update your own trips');
+    }
+
+    const seatsDiff = (updateTripDto.total_seats ?? trip.total_seats) - trip.total_seats;
+    const newAvailableSeats = trip.available_seats + seatsDiff;
+
+    await this.tripsRepository.update(id, {
+      ...updateTripDto,
+      available_seats: newAvailableSeats,
+    });
+
+    return this.findOne(id);
   }
 }

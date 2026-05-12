@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,107 +8,96 @@ import {
   SafeAreaView,
   TextInput,
   Alert,
-  Dimensions,
   ActivityIndicator,
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
-import { borderRadius, spacing, shadow } from '@/theme/colors';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { borderRadius, spacing } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import TabHeader from '@/components/TabHeader';
-import MapPickerModal from '@/components/MapPickerModal';
+import LocationSelector from '@/components/LocationSelector';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { tripsApi } from '@/api/trips';
 
-const { width } = Dimensions.get('window');
+interface EditTripData {
+  id: string;
+  origin_name: string;
+  origin_lat: number;
+  origin_lng: number;
+  destination_name: string;
+  destination_lat: number;
+  destination_lng: number;
+  departure_time: string;
+  total_seats: number;
+  price: number;
+  notes?: string;
+}
 
 export default function PublishTripScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { t } = useSettings();
   const { colors, typography } = useTheme();
   const { token } = useAuth();
 
-  const [originName, setOriginName] = useState('');
-  const [destinationName, setDestinationName] = useState('');
-  const [originLat, setOriginLat] = useState<number | null>(null);
-  const [originLng, setOriginLng] = useState<number | null>(null);
-  const [destinationLat, setDestinationLat] = useState<number | null>(null);
-  const [destinationLng, setDestinationLng] = useState<number | null>(null);
-  const [date, setDate] = useState('');
-  const [departureTime, setDepartureTime] = useState('');
+  const isEditing = !!params.tripId;
+
+  const [origin, setOrigin] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [destination, setDestination] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [totalSeats, setTotalSeats] = useState(4);
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
-  const [showMapModal, setShowMapModal] = useState(false);
-  const [mapMode, setMapMode] = useState<'origin' | 'destination'>('origin');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
+  const [date, setDate] = useState('');
+  const [departureTime, setDepartureTime] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const openMapModal = useCallback((mode: 'origin' | 'destination') => {
-    setMapMode(mode);
-    setShowMapModal(true);
-  }, []);
-
-  const handleMapConfirm = useCallback(async (lat: number, lng: number, name: string) => {
-    setShowMapModal(false);
+  React.useEffect(() => {
+    if (isInitialized || !params.tripData) return;
 
     try {
-      const response = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-      const address = response.length > 0
-        ? [response[0].street, response[0].city, response[0].region].filter(Boolean).join(', ')
-        : name;
+      const trip = JSON.parse(params.tripData as string) as EditTripData;
+      setOrigin({
+        name: trip.origin_name,
+        lat: trip.origin_lat,
+        lng: trip.origin_lng,
+      });
+      setDestination({
+        name: trip.destination_name,
+        lat: trip.destination_lat,
+        lng: trip.destination_lng,
+      });
+      setTotalSeats(trip.total_seats);
+      setPrice(String(trip.price));
+      setNotes(trip.notes || '');
 
-      if (mapMode === 'origin') {
-        setOriginName(address);
-        setOriginLat(lat);
-        setOriginLng(lng);
-      } else {
-        setDestinationName(address);
-        setDestinationLat(lat);
-        setDestinationLng(lng);
-      }
-    } catch {
-      if (mapMode === 'origin') {
-        setOriginName(name);
-        setOriginLat(lat);
-        setOriginLng(lng);
-      } else {
-        setDestinationName(name);
-        setDestinationLat(lat);
-        setDestinationLng(lng);
-      }
+      const departure = new Date(trip.departure_time);
+      setSelectedDate(departure);
+      setSelectedTime(departure);
+
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      setDate(`${pad(departure.getDate())}/${pad(departure.getMonth() + 1)}/${departure.getFullYear()}`);
+      setDepartureTime(`${pad(departure.getHours())}:${pad(departure.getMinutes())}`);
+      setIsInitialized(true);
+    } catch (e) {
+      // ignore parse errors
     }
-  }, [mapMode]);
+  }, [params.tripData, isInitialized]);
 
-  const useMyLocation = useCallback(async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permiso requerido', 'Necesitamos acceso a tu ubicacion para usar esta funcion.');
-        return;
-      }
+  const sameLocation = origin && destination && origin.name === destination.name;
 
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-
-      const response = await Location.reverseGeocodeAsync({ latitude, longitude });
-      const name = response.length > 0
-        ? [response[0].street, response[0].city].filter(Boolean).join(', ')
-        : 'Mi ubicacion';
-
-      setOriginName(name);
-      setOriginLat(latitude);
-      setOriginLng(longitude);
-    } catch {
-      Alert.alert('Error', 'No se pudo obtener tu ubicacion actual.');
-    }
-  }, []);
+  const swapLocations = () => {
+    const temp = origin;
+    setOrigin(destination);
+    setDestination(temp);
+  };
 
   const formatDate = (d: Date): string => {
     const day = d.getDate().toString().padStart(2, '0');
@@ -124,9 +113,7 @@ export default function PublishTripScreen() {
   };
 
   const handleDateChange = (_event: any, date?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
+    if (Platform.OS === 'android') setShowDatePicker(false);
     if (date) {
       setSelectedDate(date);
       setDate(formatDate(date));
@@ -134,20 +121,21 @@ export default function PublishTripScreen() {
   };
 
   const handleTimeChange = (_event: any, time?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowTimePicker(false);
-    }
+    if (Platform.OS === 'android') setShowTimePicker(false);
     if (time) {
       setSelectedTime(time);
       setDepartureTime(formatTime(time));
     }
   };
 
-  const [isPublishing, setIsPublishing] = useState(false);
-
   const handlePublish = async () => {
-    if (!originName || !destinationName || !date || !departureTime || !price || originLat === null || destinationLat === null) {
+    if (!origin || !destination || !date || !departureTime || !price) {
       Alert.alert('Error', t.publish.fillRequired);
+      return;
+    }
+
+    if (sameLocation) {
+      Alert.alert('Error', 'El origen y el destino no pueden ser iguales');
       return;
     }
 
@@ -170,9 +158,14 @@ export default function PublishTripScreen() {
       return;
     }
 
+    const confirmTitle = isEditing ? 'Confirmar cambios' : t.publish.publishConfirm;
+    const confirmMsg = isEditing
+      ? '¿Deseas guardar los cambios realizados a esta publicación?'
+      : t.publish.publishConfirmMsg.replace('${price}', `$${priceNum.toLocaleString('es-CO')}`);
+
     Alert.alert(
-      t.publish.publishConfirm,
-      t.publish.publishConfirmMsg.replace('${price}', `$${priceNum.toLocaleString('es-CO')}`),
+      confirmTitle,
+      confirmMsg,
       [
         { text: t.common.cancel, style: 'cancel' },
         {
@@ -180,24 +173,41 @@ export default function PublishTripScreen() {
           onPress: async () => {
             setIsPublishing(true);
             try {
-              await tripsApi.createTrip(token, {
-                origin_name: originName,
-                origin_lat: originLat,
-                origin_lng: originLng!,
-                destination_name: destinationName,
-                destination_lat: destinationLat,
-                destination_lng: destinationLng!,
-                departure_time: departureDate.toISOString(),
-                total_seats: totalSeats,
-                price: priceNum,
-                notes: notes || undefined,
-              });
-
-              Alert.alert(t.common.success, t.publish.publishSuccess, [
-                { text: 'OK', onPress: () => router.replace('/(tabs)/home') },
-              ]);
+              if (isEditing && params.tripId) {
+                await tripsApi.updateTrip(token, params.tripId as string, {
+                  origin_name: origin.name,
+                  origin_lat: origin.lat,
+                  origin_lng: origin.lng,
+                  destination_name: destination!.name,
+                  destination_lat: destination!.lat,
+                  destination_lng: destination!.lng,
+                  departure_time: departureDate.toISOString(),
+                  total_seats: totalSeats,
+                  price: priceNum,
+                  notes: notes || undefined,
+                });
+                Alert.alert(t.common.success, 'Viaje actualizado correctamente', [
+                  { text: 'OK', onPress: () => router.replace('/my-publications') },
+                ]);
+              } else {
+                await tripsApi.createTrip(token, {
+                  origin_name: origin.name,
+                  origin_lat: origin.lat,
+                  origin_lng: origin.lng,
+                  destination_name: destination!.name,
+                  destination_lat: destination!.lat,
+                  destination_lng: destination!.lng,
+                  departure_time: departureDate.toISOString(),
+                  total_seats: totalSeats,
+                  price: priceNum,
+                  notes: notes || undefined,
+                });
+                Alert.alert(t.common.success, t.publish.publishSuccess, [
+                  { text: 'OK', onPress: () => router.replace('/(tabs)/home') },
+                ]);
+              }
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'No se pudo publicar el viaje');
+              Alert.alert('Error', error.message || 'No se pudo guardar el viaje');
             } finally {
               setIsPublishing(false);
             }
@@ -207,7 +217,7 @@ export default function PublishTripScreen() {
     );
   };
 
-  const NumberSelector = ({ value, onIncrement, onDecrement, label, min = 1, max = 7 }: any) => (
+  const NumberSelector = ({ value, onIncrement, onDecrement, label, min = 1, max = 4 }: { value: number; onIncrement: () => void; onDecrement: () => void; label: string; min?: number; max?: number }) => (
     <View style={styles.numberSelector}>
       <Text style={[styles.label, { color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.medium, fontFamily: typography.family.medium }]}>{label}</Text>
       <View style={styles.selectorRow}>
@@ -230,61 +240,56 @@ export default function PublishTripScreen() {
     </View>
   );
 
-  const LocationPicker = ({ mode, name, color }: { mode: 'origin' | 'destination'; name: string; color: string }) => {
-    const hasLocation = name.length > 0;
-
-    return (
-      <View style={styles.locationPicker}>
-        <TouchableOpacity
-          style={[
-            styles.locationButton,
-            { backgroundColor: colors.background.card, borderColor: colors.border.default, borderWidth: 1 },
-          ]}
-          onPress={() => openMapModal(mode)}
-        >
-          <Ionicons name={mode === 'origin' ? 'location' : 'flag'} size={20} color={color} />
-          <Text
-            style={[
-              styles.locationButtonText,
-              { color: hasLocation ? colors.text.primary : colors.text.muted, fontSize: typography.sizes.md, fontFamily: typography.family.regular },
-            ]}
-            numberOfLines={1}
-          >
-            {name || 'Toca para seleccionar en mapa'}
-          </Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
-        </TouchableOpacity>
-        {mode === 'origin' && hasLocation && (
-          <TouchableOpacity style={styles.useMyLocBtn} onPress={useMyLocation}>
-            <Ionicons name="locate" size={16} color={colors.secondary.default} />
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
       <TabHeader />
-
-      <MapPickerModal
-        visible={showMapModal}
-        mode={mapMode}
-        onConfirm={handleMapConfirm}
-        onCancel={() => setShowMapModal(false)}
-      />
 
       <ScrollView style={styles.content}>
         <View style={[styles.section, { paddingHorizontal: spacing.lg }]}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{t.publish.route}</Text>
 
-          <LocationPicker mode="origin" name={originName} color={colors.tertiary.default} />
-          <LocationPicker mode="destination" name={destinationName} color={colors.secondary.default} />
+          <Text style={[styles.inputLabel, { color: colors.text.primary, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{t.publish.origin}</Text>
+          <LocationSelector
+            value={origin?.name || ''}
+            onSelect={setOrigin}
+            placeholder="Selecciona punto de origen"
+            mode="origin"
+            iconColor={colors.tertiary.default}
+          />
+
+          <View style={styles.swapRow}>
+            <View style={[styles.swapLine, { backgroundColor: colors.border.default }]} />
+            <TouchableOpacity
+              style={[styles.swapButton, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}
+              onPress={swapLocations}
+              disabled={!origin && !destination}
+            >
+              <Ionicons name="swap-vertical" size={18} color={colors.secondary.default} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[styles.inputLabel, { color: colors.text.primary, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{t.publish.destination}</Text>
+          <LocationSelector
+            value={destination?.name || ''}
+            onSelect={setDestination}
+            placeholder="Selecciona punto de destino"
+            mode="destination"
+            iconColor={colors.secondary.default}
+          />
+
+          {sameLocation && (
+            <View style={[styles.errorBox, { backgroundColor: colors.status.errorBg }]}>
+              <Ionicons name="alert-circle" size={16} color={colors.status.error} />
+              <Text style={[styles.errorText, { color: colors.status.error, fontSize: typography.sizes.sm, fontFamily: typography.family.medium }]}>
+                Origen y destino no pueden ser iguales
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={[styles.section, { paddingHorizontal: spacing.lg }]}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{t.publish.dateTime}</Text>
-          <View style={[styles.card, { backgroundColor: colors.background.card, ...shadow.sm, borderColor: colors.border.default }]}>
+          <View style={[styles.card, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: colors.background.default, borderColor: colors.border.default }]}
               onPress={() => setShowDatePicker(true)}
@@ -326,11 +331,11 @@ export default function PublishTripScreen() {
 
         <View style={[styles.section, { paddingHorizontal: spacing.lg }]}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{t.publish.seatsPrice}</Text>
-          <View style={[styles.card, { backgroundColor: colors.background.card, ...shadow.sm, borderColor: colors.border.default }]}>
+          <View style={[styles.card, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
             <NumberSelector
               value={totalSeats}
               label={t.publish.seatCount}
-              onIncrement={() => setTotalSeats(prev => prev + 1)}
+              onIncrement={() => setTotalSeats(prev => Math.min(4, prev + 1))}
               onDecrement={() => setTotalSeats(prev => Math.max(1, prev - 1))}
               max={4}
             />
@@ -364,7 +369,7 @@ export default function PublishTripScreen() {
 
         <View style={[styles.publishSection, { paddingHorizontal: spacing.lg }]}>
           <TouchableOpacity
-            style={[styles.publishButton, { backgroundColor: isPublishing ? colors.border.default : colors.tertiary.default, ...shadow.md }]}
+            style={[styles.publishButton, { backgroundColor: isPublishing ? colors.border.default : colors.tertiary.default }]}
             onPress={handlePublish}
             disabled={isPublishing}
           >
@@ -373,7 +378,7 @@ export default function PublishTripScreen() {
             ) : (
               <>
                 <Ionicons name="send-outline" size={20} color={colors.primary.contrast} />
-                <Text style={[styles.publishButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{t.publish.publishTrip}</Text>
+                <Text style={[styles.publishButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{isEditing ? 'Guardar cambios' : t.publish.publishTrip}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -389,16 +394,13 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   section: { marginBottom: spacing.md },
   sectionTitle: { marginBottom: spacing.sm },
-  locationPicker: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  locationButton: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
-  locationButtonText: { flex: 1, marginLeft: spacing.sm },
-  useMyLocBtn: { padding: spacing.sm, marginLeft: spacing.xs },
+  inputLabel: { marginBottom: spacing.sm, marginTop: spacing.xs },
+  swapRow: { alignItems: 'center', marginVertical: -spacing.xs },
+  swapLine: { width: 1, height: 20 },
+  swapButton: { width: 36, height: 36, borderRadius: borderRadius.full, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginTop: -18 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.md, padding: spacing.sm, marginTop: spacing.sm, gap: spacing.sm },
+  errorText: {},
   card: { borderRadius: borderRadius.lg, padding: spacing.md, borderWidth: 1 },
-  inputLabel: { marginBottom: spacing.sm, marginTop: spacing.sm },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, marginBottom: spacing.sm },
-  currencySymbol: { marginRight: spacing.xs },
-  input: { flex: 1, paddingVertical: spacing.md },
-  textInput: { minHeight: 60, paddingTop: spacing.md, borderWidth: 1, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
   dateButton: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginBottom: spacing.sm },
   dateText: { marginLeft: spacing.sm },
   numberSelector: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
@@ -407,6 +409,10 @@ const styles = StyleSheet.create({
   selectorBtn: { width: 40, height: 40, borderRadius: borderRadius.full, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   selectorBtnDisabled: { opacity: 0.4 },
   selectorValue: { marginHorizontal: spacing.lg },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, marginBottom: spacing.sm },
+  currencySymbol: { marginRight: spacing.xs },
+  input: { flex: 1, paddingVertical: spacing.md },
+  textInput: { minHeight: 60, paddingTop: spacing.md, borderWidth: 1, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
   publishSection: { paddingTop: spacing.md },
   publishButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: borderRadius.md, paddingVertical: spacing.md },
   publishButtonText: { marginLeft: spacing.sm },

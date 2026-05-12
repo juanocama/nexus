@@ -85,3 +85,64 @@ export class SearchTripsDto {
   @Type(() => Number)
   seats?: number;
 }
+
+export class UpdateTripDto {
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  origin_name?: string;
+
+  @ApiProperty({ required: false })
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  origin_lat?: number;
+
+  @ApiProperty({ required: false })
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  origin_lng?: number;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  destination_name?: string;
+
+  @ApiProperty({ required: false })
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  destination_lat?: number;
+
+  @ApiProperty({ required: false })
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  destination_lng?: number;
+
+  @ApiProperty({ required: false })
+  @IsDateString()
+  @IsOptional()
+  departure_time?: string;
+
+  @ApiProperty({ required: false, example: 4 })
+  @IsNumber()
+  @Min(1)
+  @Max(7)
+  @IsOptional()
+  @Type(() => Number)
+  total_seats?: number;
+
+  @ApiProperty({ required: false, example: 8000 })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  price?: number;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  notes?: string;
+}

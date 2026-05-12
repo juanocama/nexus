@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   SafeAreaView,
   FlatList,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { borderRadius, spacing, shadow } from '@/theme/colors';
@@ -14,53 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useSettings } from '@/context/SettingsContext';
 import PageHeader from '@/components/PageHeader';
-
-const MOCK_BOOKINGS = [
-  {
-    id: '1',
-    driver_name: 'Carlos Martínez',
-    origin: 'Centro Comercial Fontanar',
-    destination: 'Universidad de La Sabana',
-    date: 'Hoy',
-    time: '7:00 AM',
-    price: 8000,
-    status: 'confirmed' as const,
-    is_driver: false,
-  },
-  {
-    id: '2',
-    driver_name: 'María López',
-    origin: 'Estación Calle 100',
-    destination: 'Universidad de La Sabana',
-    date: 'Mañana',
-    time: '7:30 AM',
-    price: 6500,
-    status: 'pending' as const,
-    is_driver: false,
-  },
-  {
-    id: '3',
-    origin: 'Portal Norte',
-    destination: 'Universidad de La Sabana',
-    date: '3 Mayo',
-    time: '8:00 AM',
-    price: 5000,
-    status: 'completed' as const,
-    is_driver: true,
-    passengers: 3,
-  },
-  {
-    id: '4',
-    driver_name: 'Laura Gómez',
-    origin: 'Chicó Norte',
-    destination: 'Universidad de La Sabana',
-    date: '1 Mayo',
-    time: '6:45 AM',
-    price: 7000,
-    status: 'completed' as const,
-    is_driver: false,
-  },
-];
+import { useAuth } from '@/context/AuthContext';
+import { bookingsApi, Booking } from '@/api/bookings';
 
 type TabType = 'upcoming' | 'past';
 
@@ -68,11 +25,52 @@ export default function BookingsScreen() {
   const router = useRouter();
   const { colors, typography } = useTheme();
   const { t } = useSettings();
+  const { token, user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const upcoming = MOCK_BOOKINGS.filter(b => b.status === 'confirmed' || b.status === 'pending');
-  const past = MOCK_BOOKINGS.filter(b => b.status === 'completed' || b.status === 'cancelled');
-  const items = activeTab === 'upcoming' ? upcoming : past;
+  const loadBookings = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const data = await bookingsApi.getMyBookings(token);
+      setBookings(data);
+    } catch {
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const isTomorrow = d.toDateString() === tomorrow.toDateString();
+
+      if (isToday) return `Hoy, ${d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}`;
+      if (isTomorrow) return `Mañana, ${d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}`;
+      return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -83,71 +81,104 @@ export default function BookingsScreen() {
     }
   };
 
-  const renderBooking = ({ item }: { item: typeof MOCK_BOOKINGS[0] }) => {
+  const handleCancel = (booking: Booking) => {
+    if (!token) return;
+    Alert.alert(
+      'Cancelar reserva',
+      'Estas seguro de que deseas cancelar esta reserva?',
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: 'Cancelar reserva',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await bookingsApi.cancelBooking(token, booking.id);
+              loadBookings();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'No se pudo cancelar la reserva');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const now = new Date();
+  const upcoming = bookings.filter(b => {
+    const tripDate = new Date(b.trip.departure_time);
+    return (b.status === 'confirmed' || b.status === 'pending') && tripDate >= now;
+  });
+  const past = bookings.filter(b => {
+    const tripDate = new Date(b.trip.departure_time);
+    return b.status === 'completed' || b.status === 'cancelled' || tripDate < now;
+  });
+  const items = activeTab === 'upcoming' ? upcoming : past;
+
+  const renderBooking = ({ item }: { item: Booking }) => {
     const statusStyle = getStatusColor(item.status);
+    const isDriver = user?.id === item.trip.driver?.id;
 
     return (
-      <Link href={`/trip/${item.id}`} asChild>
-        <TouchableOpacity style={[styles.bookingCard, { backgroundColor: colors.background.card, ...shadow.sm }]}>
-          <View style={styles.cardHeader}>
-            <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-              <Text style={[styles.statusText, { color: statusStyle.text, fontSize: typography.sizes.xs, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{statusStyle.label}</Text>
-            </View>
-            <View style={[styles.typeBadge, { backgroundColor: colors.background.default }]}>
-              <Ionicons
-                name={item.is_driver ? 'car-sport' : 'person'}
-                size={14}
-                color={colors.secondary.default}
-              />
-              <Text style={[styles.typeText, { color: colors.secondary.default, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium, fontFamily: typography.family.medium }]}>
-                {item.is_driver ? t.common.driver : t.common.passenger}
-              </Text>
-            </View>
+      <View style={[styles.bookingCard, { backgroundColor: colors.background.card, ...shadow.sm }]}>
+        <View style={styles.cardHeader}>
+          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+            <Text style={[styles.statusText, { color: statusStyle.text, fontSize: typography.sizes.xs, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{statusStyle.label}</Text>
           </View>
-
-          <View style={styles.routeInfo}>
-            <View style={styles.routePoint}>
-              <Ionicons name="location" size={14} color={colors.tertiary.default} />
-              <Text style={[styles.routeText, { color: colors.text.primary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]} numberOfLines={1}>{item.origin}</Text>
-            </View>
-            <View style={[styles.routeLine, { backgroundColor: colors.border.default }]} />
-            <View style={styles.routePoint}>
-              <Ionicons name="flag" size={14} color={colors.secondary.default} />
-              <Text style={[styles.routeText, { color: colors.text.primary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]} numberOfLines={1}>{item.destination}</Text>
-            </View>
+          <View style={[styles.typeBadge, { backgroundColor: colors.background.default }]}>
+            <Ionicons
+              name={isDriver ? 'car-sport' : 'person'}
+              size={14}
+              color={colors.secondary.default}
+            />
+            <Text style={[styles.typeText, { color: colors.secondary.default, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium, fontFamily: typography.family.medium }]}>
+              {isDriver ? t.common.driver : t.common.passenger}
+            </Text>
           </View>
+        </View>
 
-          <View style={styles.cardFooter}>
-            <View style={styles.detailItem}>
-              <Ionicons name="calendar-outline" size={14} color={colors.text.muted} />
-              <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginLeft: spacing.xs }]}>{item.date}</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Ionicons name="time-outline" size={14} color={colors.text.muted} />
-              <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginLeft: spacing.xs }]}>{item.time}</Text>
-            </View>
-            <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${item.price.toLocaleString('es-CO')}</Text>
+        <View style={styles.routeInfo}>
+          <View style={styles.routePoint}>
+            <Ionicons name="location" size={14} color={colors.tertiary.default} />
+            <Text style={[styles.routeText, { color: colors.text.primary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]} numberOfLines={1}>{item.trip.origin_name}</Text>
           </View>
+          <View style={[styles.routeLine, { backgroundColor: colors.border.default }]} />
+          <View style={styles.routePoint}>
+            <Ionicons name="flag" size={14} color={colors.secondary.default} />
+            <Text style={[styles.routeText, { color: colors.text.primary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]} numberOfLines={1}>{item.trip.destination_name}</Text>
+          </View>
+        </View>
 
-          {!item.is_driver && item.status === 'confirmed' && (
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderTopColor: colors.border.default }]}
-              onPress={() => {}}
-            >
-              <Text style={[styles.cancelButtonText, { color: colors.status.error, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium, fontFamily: typography.family.medium }]}>Cancelar Reserva</Text>
-            </TouchableOpacity>
-          )}
+        <View style={styles.cardFooter}>
+          <View style={styles.detailItem}>
+            <Ionicons name="calendar-outline" size={14} color={colors.text.muted} />
+            <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginLeft: spacing.xs }]}>{formatDate(item.trip.departure_time)}</Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Ionicons name="time-outline" size={14} color={colors.text.muted} />
+            <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginLeft: spacing.xs }]}>{formatTime(item.trip.departure_time)}</Text>
+          </View>
+          <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.trip.price).toLocaleString('es-CO')}</Text>
+        </View>
 
-          {item.is_driver && (
-            <View style={[styles.passengerInfo, { borderTopColor: colors.border.default }]}>
-              <Ionicons name="people-outline" size={14} color={colors.text.muted} />
-<Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginLeft: spacing.xs }]}>
-                 {item.passengers} {item.passengers === 1 ? t.bookings.passenger : t.bookings.passengers}
-               </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </Link>
+        {!isDriver && item.status === 'confirmed' && (
+          <TouchableOpacity
+            style={[styles.cancelButton, { borderTopColor: colors.border.default }]}
+            onPress={() => handleCancel(item)}
+          >
+            <Text style={[styles.cancelButtonText, { color: colors.status.error, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium, fontFamily: typography.family.medium }]}>Cancelar Reserva</Text>
+          </TouchableOpacity>
+        )}
+
+        {isDriver && item.status === 'pending' && (
+          <View style={[styles.passengerInfo, { borderTopColor: colors.border.default }]}>
+            <Ionicons name="person-outline" size={14} color={colors.text.muted} />
+            <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginLeft: spacing.xs }]}>
+              {item.passenger?.full_name || 'Pasajero'}
+            </Text>
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -182,7 +213,11 @@ export default function BookingsScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {items.length === 0 ? (
+        {loading ? (
+          <View style={[styles.emptyState, { alignItems: 'center' }]}>
+            <ActivityIndicator size="large" color={colors.secondary.default} />
+          </View>
+        ) : items.length === 0 ? (
           <View style={[styles.emptyState, { alignItems: 'center' }]}>
             <Ionicons name="car-sport-outline" size={64} color={colors.text.muted} />
             <Text style={[styles.emptyText, { color: colors.text.primary }]}>

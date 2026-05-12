@@ -73,6 +73,24 @@ class TripsApi {
       method: 'PUT',
     });
   }
+
+  async updateTrip(token: string, id: string, data: {
+    origin_name?: string;
+    origin_lat?: number;
+    origin_lng?: number;
+    destination_name?: string;
+    destination_lat?: number;
+    destination_lng?: number;
+    departure_time?: string;
+    total_seats?: number;
+    price?: number;
+    notes?: string;
+  }) {
+    return this.request(`/trips/${id}`, token, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const tripsApi = new TripsApi();

@@ -6,14 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  TextInput,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { borderRadius, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import TabHeader from '@/components/TabHeader';
+import LocationSelector from '@/components/LocationSelector';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
@@ -42,8 +42,8 @@ export default function SearchScreen() {
   const { t } = useSettings();
   const { colors, typography } = useTheme();
   const { token } = useAuth();
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('Universidad de La Sabana');
+  const [origin, setOrigin] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [destination, setDestination] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [results, setResults] = useState<Trip[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -51,21 +51,36 @@ export default function SearchScreen() {
   const s = t.search;
   const c = t.common;
 
+  const swapLocations = () => {
+    const temp = origin;
+    setOrigin(destination);
+    setDestination(temp);
+  };
+
+  const clearOrigin = () => setOrigin(null);
+  const clearDestination = () => setDestination(null);
+  const clearAll = () => {
+    setOrigin(null);
+    setDestination(null);
+    setResults([]);
+    setHasSearched(false);
+  };
+
+  const sameLocation = origin && destination && origin.name === destination.name;
+
   const handleSearch = async () => {
-    if (!token) {
-      return;
-    }
+    if (sameLocation) return;
 
     setIsSearching(true);
     setHasSearched(true);
 
     try {
-      const data = await tripsApi.searchTrips(token, {
-        origin: origin.trim() || undefined,
-        destination: destination.trim() || undefined,
+      const data = await tripsApi.searchTrips(token!, {
+        origin: origin?.name || undefined,
+        destination: destination?.name || undefined,
       });
-      setResults(data || []);
-    } catch (error) {
+      setResults(data as Trip[] || []);
+    } catch {
       setResults([]);
     } finally {
       setIsSearching(false);
@@ -81,55 +96,70 @@ export default function SearchScreen() {
   };
 
   const renderTripCard = ({ item }: { item: Trip }) => (
-    <Link href={`/trip/${item.id}`} asChild>
-      <TouchableOpacity style={[styles.tripCard, { backgroundColor: colors.background.card, ...shadow.md }]}>
-        <View style={styles.cardHeader}>
-          <View style={styles.driverInfo}>
-            <View style={[styles.driverAvatar, { backgroundColor: colors.secondary.default }]}>
-              <Text style={[styles.avatarText, { color: colors.primary.contrast, fontSize: typography.sizes.md, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{item.driver?.full_name?.charAt(0) || '?'}</Text>
-            </View>
-            <View>
-              <Text style={[styles.driverName, { color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{item.driver?.full_name || 'Desconocido'}</Text>
-              <Text style={[styles.driverFaculty, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{item.driver?.faculty || '-'}</Text>
-            </View>
+    <TouchableOpacity
+      style={[styles.tripCard, { backgroundColor: colors.background.card, ...shadow.md }]}
+      onPress={() => router.push(`/trip/${item.id}`)}
+    >
+      <View style={styles.cardHeader}>
+        <View style={styles.driverInfo}>
+          <View style={[styles.driverAvatar, { backgroundColor: colors.secondary.default }]}>
+            <Text style={[styles.avatarText, { color: colors.primary.contrast, fontSize: typography.sizes.md, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{item.driver?.full_name?.charAt(0) || '?'}</Text>
           </View>
+          <View>
+            <Text style={[styles.driverName, { color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{item.driver?.full_name || 'Desconocido'}</Text>
+            <Text style={[styles.driverFaculty, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{item.driver?.faculty || '-'}</Text>
+          </View>
+        </View>
+        {typeof item.driver?.average_rating === 'number' && (
           <View style={[styles.ratingBadge, { backgroundColor: '#FEF3C7' }]}>
             <Ionicons name="star" size={12} color="#F59E0B" />
             <Text style={[styles.ratingText, { color: '#92400E', fontSize: typography.sizes.sm, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>
-              {item.driver?.average_rating?.toFixed(1) || '0.0'}
+              {item.driver.average_rating.toFixed(1)}
             </Text>
           </View>
+        )}
+      </View>
+
+      <View style={styles.routeContainer}>
+        <View style={styles.routePoint}>
+          <Ionicons name="location" size={16} color={colors.tertiary.default} />
+          <Text style={[styles.routeText, { color: colors.text.primary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]} numberOfLines={1}>{item.origin_name}</Text>
         </View>
-        <View style={styles.routeContainer}>
-          <View style={styles.routePoint}>
-            <Ionicons name="location" size={16} color={colors.tertiary.default} />
-            <Text style={[styles.routeText, { color: colors.text.primary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]} numberOfLines={1}>{item.origin_name}</Text>
-          </View>
-          <View style={[styles.routeLine, { backgroundColor: colors.border.default }]} />
-          <View style={styles.routePoint}>
-            <Ionicons name="flag" size={16} color={colors.secondary.default} />
-            <Text style={[styles.routeText, { color: colors.text.primary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]} numberOfLines={1}>{item.destination_name}</Text>
-          </View>
+        <View style={[styles.routeLine, { backgroundColor: colors.border.default }]} />
+        <View style={styles.routePoint}>
+          <Ionicons name="flag" size={16} color={colors.secondary.default} />
+          <Text style={[styles.routeText, { color: colors.text.primary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]} numberOfLines={1}>{item.destination_name}</Text>
         </View>
-        <View style={styles.cardFooter}>
-          <View style={styles.tripDetails}>
-            <Ionicons name="time-outline" size={14} color={colors.text.muted} />
-            <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{formatTime(item.departure_time)}</Text>
-          </View>
-          <View style={styles.tripDetails}>
-            <Ionicons name="people-outline" size={14} color={colors.text.muted} />
-            <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{item.available_seats} {c.seats}</Text>
-          </View>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <View style={styles.tripDetails}>
+          <Ionicons name="time-outline" size={14} color={colors.text.muted} />
+          <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{formatTime(item.departure_time)}</Text>
         </View>
-        <View style={styles.cardBottom}>
-          <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.price).toLocaleString('es-CO')}</Text>
-          <TouchableOpacity style={[styles.bookButton, { backgroundColor: colors.secondary.default }]} onPress={() => router.push(`/trip/${item.id}`)}>
-            <Text style={[styles.bookButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.sm, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{s.viewDetails}</Text>
-          </TouchableOpacity>
+        <View style={styles.tripDetails}>
+          <Ionicons name="people-outline" size={14} color={colors.text.muted} />
+          <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{item.available_seats} {c.seats}</Text>
         </View>
-      </TouchableOpacity>
-    </Link>
+      </View>
+
+      <View style={styles.cardBottom}>
+        <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.price).toLocaleString('es-CO')}</Text>
+        <View style={[styles.bookButton, { backgroundColor: colors.secondary.default }]}>
+          <Text style={[styles.bookButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.sm, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{s.viewDetails}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
+
+  React.useEffect(() => {
+    if (token && !hasSearched) {
+      tripsApi.searchTrips(token).then(data => {
+        setResults((data as Trip[]) || []);
+        setHasSearched(true);
+      }).catch(() => setResults([]));
+    }
+  }, [token, hasSearched]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
@@ -138,28 +168,84 @@ export default function SearchScreen() {
       <ScrollView style={styles.content}>
         <View style={[styles.searchForm, { paddingHorizontal: spacing.lg }]}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{s.title}</Text>
-          <View style={[styles.inputGroup, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
-            <Ionicons name="location-outline" size={20} color={colors.tertiary.default} />
-            <TextInput style={[styles.input, { color: colors.text.primary, fontSize: typography.sizes.md, fontFamily: typography.family.regular }]} placeholder={s.originPlaceholder} placeholderTextColor={colors.text.muted} value={origin} onChangeText={setOrigin} />
-          </View>
-          <View style={[styles.inputGroup, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
-            <Ionicons name="flag-outline" size={20} color={colors.secondary.default} />
-            <TextInput style={[styles.input, { color: colors.text.primary, fontSize: typography.sizes.md, fontFamily: typography.family.regular }]} placeholder={s.destinationPlaceholder} placeholderTextColor={colors.text.muted} value={destination} onChangeText={setDestination} />
-          </View>
-          <TouchableOpacity style={[styles.dateButton, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
-            <Ionicons name="calendar-outline" size={20} color={colors.text.secondary} />
-            <Text style={[styles.dateText, { color: colors.text.primary, fontSize: typography.sizes.md, fontFamily: typography.family.regular }]}>{t.common.today}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.searchButton, { backgroundColor: colors.secondary.default }]} onPress={handleSearch} disabled={isSearching}>
-            {isSearching ? (
-              <ActivityIndicator size="small" color={colors.primary.contrast} />
-            ) : (
-              <>
-                <Ionicons name="search" size={20} color={colors.primary.contrast} />
-                <Text style={[styles.searchButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{s.findTrips}</Text>
-              </>
+
+          <Text style={[styles.inputLabel, { color: colors.text.primary, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{s.origin}</Text>
+          <View style={styles.selectorRow}>
+            <View style={styles.selectorWrapper}>
+              <LocationSelector
+                value={origin?.name || ''}
+                onSelect={setOrigin}
+                placeholder={s.originPlaceholder}
+                mode="origin"
+                iconColor={colors.tertiary.default}
+              />
+            </View>
+            {origin && (
+              <TouchableOpacity style={styles.clearBtn} onPress={clearOrigin}>
+                <Ionicons name="close-circle" size={22} color={colors.text.muted} />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </View>
+
+          <View style={styles.swapRow}>
+            <View style={[styles.swapLine, { backgroundColor: colors.border.default }]} />
+            <TouchableOpacity
+              style={[styles.swapButton, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}
+              onPress={swapLocations}
+              disabled={!origin && !destination}
+            >
+              <Ionicons name="swap-vertical" size={18} color={colors.secondary.default} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[styles.inputLabel, { color: colors.text.primary, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{s.destination}</Text>
+          <View style={styles.selectorRow}>
+            <View style={styles.selectorWrapper}>
+              <LocationSelector
+                value={destination?.name || ''}
+                onSelect={setDestination}
+                placeholder={s.destinationPlaceholder}
+                mode="destination"
+                iconColor={colors.secondary.default}
+              />
+            </View>
+            {destination && (
+              <TouchableOpacity style={styles.clearBtn} onPress={clearDestination}>
+                <Ionicons name="close-circle" size={22} color={colors.text.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {sameLocation && (
+            <View style={[styles.errorBox, { backgroundColor: colors.status.errorBg }]}>
+              <Ionicons name="alert-circle" size={16} color={colors.status.error} />
+              <Text style={[styles.errorText, { color: colors.status.error, fontSize: typography.sizes.sm, fontFamily: typography.family.medium }]}>
+                Origen y destino no pueden ser iguales
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.searchButton, { backgroundColor: sameLocation ? colors.text.muted : colors.secondary.default, flex: 1 }]}
+              onPress={handleSearch}
+              disabled={isSearching || sameLocation}
+            >
+              {isSearching ? (
+                <ActivityIndicator size="small" color={colors.primary.contrast} />
+              ) : (
+                <>
+                  <Ionicons name="search" size={20} color={colors.primary.contrast} />
+                  <Text style={[styles.searchButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{s.findTrips}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            {hasSearched && (
+              <TouchableOpacity style={[styles.clearAllButton, { borderColor: colors.border.default }]} onPress={clearAll}>
+                <Ionicons name="refresh" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {hasSearched && (
@@ -196,11 +282,18 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   searchForm: { paddingTop: spacing.lg },
   sectionTitle: { marginBottom: spacing.md },
-  inputGroup: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginBottom: spacing.sm },
-  input: { flex: 1, marginLeft: spacing.sm },
-  dateButton: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginBottom: spacing.lg },
-  dateText: { marginLeft: spacing.sm },
-  searchButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: borderRadius.md, paddingVertical: spacing.md, marginBottom: spacing.lg },
+  inputLabel: { marginBottom: spacing.sm, marginTop: spacing.xs },
+  selectorRow: { flexDirection: 'row', alignItems: 'center' },
+  selectorWrapper: { flex: 1 },
+  clearBtn: { paddingLeft: spacing.sm, paddingBottom: spacing.sm },
+  swapRow: { alignItems: 'center', marginVertical: -spacing.xs },
+  swapLine: { width: 1, height: 20 },
+  swapButton: { width: 36, height: 36, borderRadius: borderRadius.full, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginTop: -18 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.md, padding: spacing.sm, marginTop: spacing.sm, gap: spacing.sm },
+  errorText: {},
+  buttonRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, gap: spacing.sm },
+  searchButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: borderRadius.md, paddingVertical: spacing.md },
+  clearAllButton: { width: 48, height: 48, borderRadius: borderRadius.md, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   searchButtonText: { marginLeft: spacing.sm },
   resultsSection: { marginTop: spacing.lg },
   resultsTitle: { marginBottom: spacing.md },

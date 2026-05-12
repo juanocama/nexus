@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -12,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TripsService } from './trips.service';
-import { CreateTripDto, SearchTripsDto } from './dto/trip.dto';
+import { CreateTripDto, SearchTripsDto, UpdateTripDto } from './dto/trip.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/roles.guard';
 import { Roles } from '../../common/roles.decorator';
@@ -38,6 +39,12 @@ export class TripsController {
   @Post()
   async create(@Body() createTripDto: CreateTripDto, @Req() req: any) {
     return this.tripsService.create(createTripDto, req.user.id);
+  }
+
+  @Roles('driver')
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() updateTripDto: UpdateTripDto, @Req() req: any) {
+    return this.tripsService.update(id, updateTripDto, req.user.id);
   }
 
   @Roles('driver')
