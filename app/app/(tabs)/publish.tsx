@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { borderRadius, spacing } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import TabHeader from '@/components/TabHeader';
@@ -21,6 +21,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { tripsApi } from '@/api/trips';
+import { vehiclesApi, Vehicle } from '@/api/vehicles';
 
 interface EditTripData {
   id: string;
@@ -34,12 +35,13 @@ interface EditTripData {
   total_seats: number;
   price: number;
   notes?: string;
+  vehicle_id?: string;
 }
 
 export default function PublishTripScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { t } = useSettings();
+  const { t, language } = useSettings();
   const { colors, typography } = useTheme();
   const { token } = useAuth();
 
@@ -58,6 +60,9 @@ export default function PublishTripScreen() {
   const [departureTime, setDepartureTime] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [showVehiclePicker, setShowVehiclePicker] = useState(false);
 
   React.useEffect(() => {
     if (isInitialized || !params.tripData) return;
@@ -74,22 +79,31 @@ export default function PublishTripScreen() {
         lat: trip.destination_lat,
         lng: trip.destination_lng,
       });
-      setTotalSeats(trip.total_seats);
-      setPrice(String(trip.price));
-      setNotes(trip.notes || '');
+      if (trip.total_seats) setTotalSeats(trip.total_seats);
+      if (trip.price) setPrice(String(trip.price));
+      if (trip.notes) setNotes(trip.notes);
+      setSelectedVehicleId((trip as any).vehicle_id || null);
 
-      const departure = new Date(trip.departure_time);
-      setSelectedDate(departure);
-      setSelectedTime(departure);
-
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      setDate(`${pad(departure.getDate())}/${pad(departure.getMonth() + 1)}/${departure.getFullYear()}`);
-      setDepartureTime(`${pad(departure.getHours())}:${pad(departure.getMinutes())}`);
+      if (trip.departure_time) {
+        const departure = new Date(trip.departure_time);
+        setSelectedDate(departure);
+        setSelectedTime(departure);
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        setDate(`${pad(departure.getDate())}/${pad(departure.getMonth() + 1)}/${departure.getFullYear()}`);
+        setDepartureTime(`${pad(departure.getHours())}:${pad(departure.getMinutes())}`);
+      }
       setIsInitialized(true);
     } catch (e) {
       // ignore parse errors
     }
   }, [params.tripData, isInitialized]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+      vehiclesApi.getMyVehicles(token).then(setVehicles).catch(() => {});
+    }, [token])
+  );
 
   const sameLocation = origin && destination && origin.name === destination.name;
 
@@ -134,6 +148,11 @@ export default function PublishTripScreen() {
       return;
     }
 
+    if (!selectedVehicleId) {
+      Alert.alert('Error', 'Debes seleccionar un vehículo para publicar un viaje');
+      return;
+    }
+
     if (sameLocation) {
       Alert.alert('Error', 'El origen y el destino no pueden ser iguales');
       return;
@@ -161,7 +180,7 @@ export default function PublishTripScreen() {
     const confirmTitle = isEditing ? 'Confirmar cambios' : t.publish.publishConfirm;
     const confirmMsg = isEditing
       ? '¿Deseas guardar los cambios realizados a esta publicación?'
-      : t.publish.publishConfirmMsg.replace('${price}', `$${priceNum.toLocaleString('es-CO')}`);
+      : t.publish.publishConfirmMsg.replace('${price}', `$${priceNum.toLocaleString(language === 'en' ? 'en-US' : 'es-CO')}`);
 
     Alert.alert(
       confirmTitle,
@@ -185,6 +204,7 @@ export default function PublishTripScreen() {
                   total_seats: totalSeats,
                   price: priceNum,
                   notes: notes || undefined,
+                  vehicle_id: selectedVehicleId || undefined,
                 });
                 Alert.alert(t.common.success, 'Viaje actualizado correctamente', [
                   { text: 'OK', onPress: () => router.replace('/my-publications') },
@@ -201,6 +221,7 @@ export default function PublishTripScreen() {
                   total_seats: totalSeats,
                   price: priceNum,
                   notes: notes || undefined,
+                  vehicle_id: selectedVehicleId || undefined,
                 });
                 Alert.alert(t.common.success, t.publish.publishSuccess, [
                   { text: 'OK', onPress: () => router.replace('/(tabs)/home') },
@@ -330,6 +351,51 @@ export default function PublishTripScreen() {
         )}
 
         <View style={[styles.section, { paddingHorizontal: spacing.lg }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text.primary, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>Vehículo</Text>
+          {vehicles.length === 0 ? (
+            <View style={[styles.card, { backgroundColor: colors.background.card, borderColor: colors.border.default, alignItems: 'center', paddingVertical: spacing.lg }]}>
+              <Ionicons name="car-sport-outline" size={40} color={colors.text.muted} />
+              <Text style={[{ color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.medium, fontFamily: typography.family.medium, textAlign: 'center', marginTop: spacing.sm }]}>
+                Necesitas registrar un vehículo para publicar viajes
+              </Text>
+              <TouchableOpacity
+                style={[{ backgroundColor: colors.secondary.default, borderRadius: borderRadius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, marginTop: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }]}
+                onPress={() => router.push('/my-vehicles')}
+              >
+                <Ionicons name="add" size={18} color={colors.primary.contrast} />
+                <Text style={[{ color: colors.primary.contrast, fontSize: typography.sizes.sm, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>
+                  Registrar Vehículo
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={[styles.card, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
+              {vehicles.map((v) => (
+                <TouchableOpacity
+                  key={v.id}
+                  style={[styles.vehicleOption, { borderBottomColor: colors.border.default }, selectedVehicleId === v.id && { backgroundColor: colors.secondary.default + '15' }]}
+                  onPress={() => setSelectedVehicleId(selectedVehicleId === v.id ? null : v.id)}
+                >
+                  <Ionicons
+                    name={selectedVehicleId === v.id ? 'radio-button-on' : 'radio-button-off'}
+                    size={20}
+                    color={selectedVehicleId === v.id ? colors.secondary.default : colors.text.muted}
+                  />
+                  <View style={styles.vehicleOptionInfo}>
+                    <Text style={[styles.vehicleOptionName, { color: colors.text.primary, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium, fontFamily: typography.family.medium }]}>
+                      {v.brand} {v.model}
+                    </Text>
+                    <Text style={[styles.vehicleOptionDetail, { color: colors.text.muted, fontSize: typography.sizes.xs, fontFamily: typography.family.regular }]}>
+                      {v.color} - {v.plate}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.section, { paddingHorizontal: spacing.lg }]}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{t.publish.seatsPrice}</Text>
           <View style={[styles.card, { backgroundColor: colors.background.card, borderColor: colors.border.default }]}>
             <NumberSelector
@@ -395,9 +461,9 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.md },
   sectionTitle: { marginBottom: spacing.sm },
   inputLabel: { marginBottom: spacing.sm, marginTop: spacing.xs },
-  swapRow: { alignItems: 'center', marginVertical: -spacing.xs },
-  swapLine: { width: 1, height: 20 },
-  swapButton: { width: 36, height: 36, borderRadius: borderRadius.full, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginTop: -18 },
+  swapRow: { alignItems: 'center', marginVertical: spacing.xs },
+  swapLine: { width: 1, height: 24 },
+  swapButton: { width: 36, height: 36, borderRadius: borderRadius.full, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   errorBox: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.md, padding: spacing.sm, marginTop: spacing.sm, gap: spacing.sm },
   errorText: {},
   card: { borderRadius: borderRadius.lg, padding: spacing.md, borderWidth: 1 },
@@ -416,4 +482,8 @@ const styles = StyleSheet.create({
   publishSection: { paddingTop: spacing.md },
   publishButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: borderRadius.md, paddingVertical: spacing.md },
   publishButtonText: { marginLeft: spacing.sm },
+  vehicleOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.sm, borderRadius: borderRadius.md, marginBottom: spacing.xs },
+  vehicleOptionInfo: { marginLeft: spacing.md, flex: 1 },
+  vehicleOptionName: {},
+  vehicleOptionDetail: { marginTop: 2 },
 });

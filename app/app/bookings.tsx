@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, Link } from 'expo-router';
+import { useRouter, Link, useFocusEffect } from 'expo-router';
 import { borderRadius, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
@@ -24,14 +24,17 @@ type TabType = 'upcoming' | 'past';
 export default function BookingsScreen() {
   const router = useRouter();
   const { colors, typography } = useTheme();
-  const { t } = useSettings();
+  const { t, language } = useSettings();
   const { token, user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadBookings = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await bookingsApi.getMyBookings(token);
@@ -43,9 +46,25 @@ export default function BookingsScreen() {
     }
   }, [token]);
 
-  useEffect(() => {
-    loadBookings();
-  }, [loadBookings]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      (async () => {
+        try {
+          const data = await bookingsApi.getMyBookings(token);
+          setBookings(data);
+        } catch {
+          setBookings([]);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }, [token])
+  );
 
   const formatDate = (dateStr: string) => {
     try {
@@ -56,9 +75,9 @@ export default function BookingsScreen() {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const isTomorrow = d.toDateString() === tomorrow.toDateString();
 
-      if (isToday) return `Hoy, ${d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}`;
-      if (isTomorrow) return `Mañana, ${d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}`;
-      return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+      if (isToday) return `${t.common.today}, ${d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short' })}`;
+      if (isTomorrow) return `${t.common.tomorrow}, ${d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short' })}`;
+      return d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short' });
     } catch {
       return dateStr;
     }
@@ -66,7 +85,7 @@ export default function BookingsScreen() {
 
   const formatTime = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+      return new Date(dateStr).toLocaleTimeString(language === 'en' ? 'en-US' : 'es-CO', { hour: '2-digit', minute: '2-digit' });
     } catch {
       return '';
     }
@@ -84,19 +103,19 @@ export default function BookingsScreen() {
   const handleCancel = (booking: Booking) => {
     if (!token) return;
     Alert.alert(
-      'Cancelar reserva',
-      'Estas seguro de que deseas cancelar esta reserva?',
+      t.bookings.cancelBooking,
+      t.bookings.cancelBooking,
       [
         { text: t.common.cancel, style: 'cancel' },
         {
-          text: 'Cancelar reserva',
+          text: t.common.confirm,
           style: 'destructive',
           onPress: async () => {
             try {
               await bookingsApi.cancelBooking(token, booking.id);
               loadBookings();
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'No se pudo cancelar la reserva');
+              Alert.alert(t.common.error, error.message || t.trip.bookingError);
             }
           },
         },
@@ -120,7 +139,11 @@ export default function BookingsScreen() {
     const isDriver = user?.id === item.trip.driver?.id;
 
     return (
-      <View style={[styles.bookingCard, { backgroundColor: colors.background.card, ...shadow.sm }]}>
+      <TouchableOpacity
+        style={[styles.bookingCard, { backgroundColor: colors.background.card, ...shadow.sm }]}
+        onPress={() => router.push(`/trip/${item.trip.id}`)}
+        activeOpacity={0.7}
+      >
         <View style={styles.cardHeader}>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
             <Text style={[styles.statusText, { color: statusStyle.text, fontSize: typography.sizes.xs, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{statusStyle.label}</Text>
@@ -158,15 +181,15 @@ export default function BookingsScreen() {
             <Ionicons name="time-outline" size={14} color={colors.text.muted} />
             <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginLeft: spacing.xs }]}>{formatTime(item.trip.departure_time)}</Text>
           </View>
-          <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.trip.price).toLocaleString('es-CO')}</Text>
+          <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.trip.price).toLocaleString(language === 'en' ? 'en-US' : 'es-CO')}</Text>
         </View>
 
-        {!isDriver && item.status === 'confirmed' && (
+        {!isDriver && item.status === 'confirmed' && new Date(item.trip.departure_time) >= now && (
           <TouchableOpacity
             style={[styles.cancelButton, { borderTopColor: colors.border.default }]}
             onPress={() => handleCancel(item)}
           >
-            <Text style={[styles.cancelButtonText, { color: colors.status.error, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium, fontFamily: typography.family.medium }]}>Cancelar Reserva</Text>
+            <Text style={[styles.cancelButtonText, { color: colors.status.error, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium, fontFamily: typography.family.medium }]}>{t.bookings.cancelBooking}</Text>
           </TouchableOpacity>
         )}
 
@@ -174,11 +197,11 @@ export default function BookingsScreen() {
           <View style={[styles.passengerInfo, { borderTopColor: colors.border.default }]}>
             <Ionicons name="person-outline" size={14} color={colors.text.muted} />
             <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginLeft: spacing.xs }]}>
-              {item.passenger?.full_name || 'Pasajero'}
+              {item.passenger?.full_name || t.common.passenger}
             </Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 

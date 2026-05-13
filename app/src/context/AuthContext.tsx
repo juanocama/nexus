@@ -12,6 +12,7 @@ interface User {
   average_rating?: number;
   total_trips?: number;
   status?: string;
+  roles?: string[];
   created_at?: string;
   updated_at?: string;
 }
@@ -104,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       average_rating: userFields.average_rating,
       total_trips: userFields.total_trips,
       status: userFields.status,
+      roles: userFields.roles || [],
     };
 
     await setItem(TOKEN_KEY, String(accessToken));

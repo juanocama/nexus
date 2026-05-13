@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { Booking } from './booking.entity';
+import { Vehicle } from './vehicle.entity';
 
 export type TripStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -24,6 +25,13 @@ export class Trip {
   @ManyToOne(() => User, (user) => user.trips_as_driver)
   @JoinColumn({ name: 'driver_id' })
   driver: User;
+
+  @Column({ name: 'vehicle_id', nullable: true })
+  vehicle_id: string | null;
+
+  @ManyToOne(() => Vehicle, (vehicle) => vehicle.trips)
+  @JoinColumn({ name: 'vehicle_id' })
+  vehicle: Vehicle | null;
 
   @Column({ name: 'origin_name', length: 255 })
   origin_name: string;

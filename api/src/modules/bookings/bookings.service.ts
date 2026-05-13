@@ -37,8 +37,16 @@ export class BookingsService {
       where: { trip: { id: createDto.trip_id }, passenger: { id: passengerId } },
     });
 
-    if (existingBooking) {
+    if (existingBooking && existingBooking.status !== 'cancelled') {
       throw new BadRequestException('You already have a booking for this trip');
+    }
+
+    if (existingBooking && existingBooking.status === 'cancelled') {
+      existingBooking.status = 'confirmed';
+      existingBooking.meeting_point_name = createDto.meeting_point_name || null;
+      existingBooking.meeting_point_lat = createDto.meeting_point_lat || null;
+      existingBooking.meeting_point_lng = createDto.meeting_point_lng || null;
+      return this.bookingsRepository.save(existingBooking);
     }
 
     const booking = this.bookingsRepository.create({

@@ -35,7 +35,7 @@ interface DriverTrip {
 export default function MyPublicationsScreen() {
   const router = useRouter();
   const { colors, typography } = useTheme();
-  const { t } = useSettings();
+  const { t, language } = useSettings();
   const { token } = useAuth();
   const [trips, setTrips] = useState<DriverTrip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,9 +66,9 @@ export default function MyPublicationsScreen() {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const isTomorrow = d.toDateString() === tomorrow.toDateString();
 
-      if (isToday) return `Hoy, ${d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}`;
-      if (isTomorrow) return `Mañana, ${d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}`;
-      return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+      if (isToday) return `${t.common.today}, ${d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short' })}`;
+      if (isTomorrow) return `${t.common.tomorrow}, ${d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short' })}`;
+      return d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short' });
     } catch {
       return dateStr;
     }
@@ -76,7 +76,7 @@ export default function MyPublicationsScreen() {
 
   const formatTime = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+      return new Date(dateStr).toLocaleTimeString(language === 'en' ? 'en-US' : 'es-CO', { hour: '2-digit', minute: '2-digit' });
     } catch {
       return '';
     }
@@ -86,24 +86,24 @@ export default function MyPublicationsScreen() {
     if (!token) return;
 
     if (trip.confirmed_passengers && trip.confirmed_passengers > 0) {
-      Alert.alert('No disponible', 'No puedes cancelar un viaje que ya tiene pasajeros confirmados');
+      Alert.alert(t.common.error, t.trip.noSeats);
       return;
     }
 
     Alert.alert(
-      'Cancelar publicación',
-      'Estas seguro de que deseas cancelar esta publicación?',
+      t.bookings.cancelBooking,
+      t.bookings.cancelBooking,
       [
         { text: t.common.cancel, style: 'cancel' },
         {
-          text: 'Cancelar',
+          text: t.common.confirm,
           style: 'destructive',
           onPress: async () => {
             try {
               await tripsApi.cancelTrip(token, trip.id);
               loadTrips();
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'No se pudo cancelar la publicación');
+              Alert.alert(t.common.error, error.message || t.trip.bookingError);
             }
           },
         },
@@ -113,9 +113,9 @@ export default function MyPublicationsScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return { bg: colors.status.successBg, text: colors.status.success, label: 'Activo' };
-      case 'completed': return { bg: colors.status.infoBg, text: colors.status.info, label: 'Completado' };
-      case 'cancelled': return { bg: colors.status.errorBg, text: colors.status.error, label: 'Cancelado' };
+      case 'active': return { bg: colors.status.successBg, text: colors.status.success, label: t.bookings.confirmed };
+      case 'completed': return { bg: colors.status.infoBg, text: colors.status.info, label: t.bookings.completed };
+      case 'cancelled': return { bg: colors.status.errorBg, text: colors.status.error, label: t.bookings.cancelled };
       default: return { bg: colors.status.warningBg, text: colors.status.warning, label: status };
     }
   };
@@ -127,12 +127,12 @@ export default function MyPublicationsScreen() {
     if (!canDelete || !isEditable) return;
 
     Alert.alert(
-      'Opciones de publicación',
+      t.profile.options,
       `${trip.origin_name} → ${trip.destination_name}`,
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Editar', onPress: () => router.push({ pathname: '/(tabs)/publish', params: { tripId: trip.id, tripData: JSON.stringify(trip) } }) },
-        { text: 'Eliminar', style: 'destructive', onPress: () => handleCancelTrip(trip) },
+        { text: t.common.cancel, style: 'cancel' },
+        { text: t.payments.editCard, onPress: () => router.push({ pathname: '/(tabs)/publish', params: { tripId: trip.id, tripData: JSON.stringify(trip) } }) },
+        { text: t.common.delete, style: 'destructive', onPress: () => handleCancelTrip(trip) },
       ]
     );
   };
@@ -189,20 +189,20 @@ export default function MyPublicationsScreen() {
               </Text>
             </View>
           </View>
-          <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.price).toLocaleString('es-CO')}</Text>
+          <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.price).toLocaleString(language === 'en' ? 'en-US' : 'es-CO')}</Text>
         </View>
 
         {!canDelete && item.status === 'active' && (
           <View style={[styles.warningBox, { borderTopColor: colors.border.default }]}>
             <Ionicons name="information-circle" size={14} color={colors.status.warning} />
             <Text style={[styles.warningText, { color: colors.status.warning, fontSize: typography.sizes.xs, fontFamily: typography.family.regular }]}>
-              No editable - tiene pasajeros confirmados
+              {t.trip.noSeats}
             </Text>
           </View>
         )}
         {canDelete && isEditable && (
           <Text style={[styles.tapHint, { color: colors.text.muted, fontSize: typography.sizes.xs, fontFamily: typography.family.regular }]}>
-            Toca para ver opciones
+            {t.profile.options}
           </Text>
         )}
       </TouchableOpacity>
@@ -222,10 +222,10 @@ export default function MyPublicationsScreen() {
           <View style={[styles.emptyState, { alignItems: 'center' }]}>
             <Ionicons name="document-text-outline" size={64} color={colors.text.muted} />
             <Text style={[styles.emptyText, { color: colors.text.primary }]}>
-              No tienes publicaciones activas
+              {t.home.noTripsAvailable}
             </Text>
             <Text style={[styles.emptySubtext, { color: colors.text.muted }]}>
-              Publica un viaje para comenzar
+              {t.home.beFirstToPublish}
             </Text>
             <TouchableOpacity
               style={[styles.emptyButton, { backgroundColor: colors.secondary.default }]}

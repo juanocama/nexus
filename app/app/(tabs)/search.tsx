@@ -9,7 +9,7 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { borderRadius, spacing, shadow } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import TabHeader from '@/components/TabHeader';
@@ -39,7 +39,8 @@ interface Trip {
 
 export default function SearchScreen() {
   const router = useRouter();
-  const { t } = useSettings();
+  const params = useLocalSearchParams();
+  const { t, language } = useSettings();
   const { colors, typography } = useTheme();
   const { token } = useAuth();
   const [origin, setOrigin] = useState<{ name: string; lat: number; lng: number } | null>(null);
@@ -67,6 +68,14 @@ export default function SearchScreen() {
   };
 
   const sameLocation = origin && destination && origin.name === destination.name;
+  const activeResults = results.filter(r => new Date(r.departure_time) >= new Date());
+
+  React.useEffect(() => {
+    if (params.origin && params.destination) {
+      setOrigin({ name: params.origin as string, lat: 0, lng: 0 });
+      setDestination({ name: params.destination as string, lat: 0, lng: 0 });
+    }
+  }, [params.origin, params.destination]);
 
   const handleSearch = async () => {
     if (sameLocation) return;
@@ -87,9 +96,26 @@ export default function SearchScreen() {
     }
   };
 
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const isTomorrow = d.toDateString() === tomorrow.toDateString();
+
+      if (isToday) return `${t.common.today}, ${d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short' })}`;
+      if (isTomorrow) return `${t.common.tomorrow}, ${d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short' })}`;
+      return d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short' });
+    } catch {
+      return dateStr;
+    }
+  };
+
   const formatTime = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+      return new Date(dateStr).toLocaleTimeString(language === 'en' ? 'en-US' : 'es-CO', { hour: '2-digit', minute: '2-digit' });
     } catch {
       return dateStr;
     }
@@ -106,7 +132,7 @@ export default function SearchScreen() {
             <Text style={[styles.avatarText, { color: colors.primary.contrast, fontSize: typography.sizes.md, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{item.driver?.full_name?.charAt(0) || '?'}</Text>
           </View>
           <View>
-            <Text style={[styles.driverName, { color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{item.driver?.full_name || 'Desconocido'}</Text>
+            <Text style={[styles.driverName, { color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{item.driver?.full_name || c.unknown}</Text>
             <Text style={[styles.driverFaculty, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{item.driver?.faculty || '-'}</Text>
           </View>
         </View>
@@ -134,6 +160,10 @@ export default function SearchScreen() {
 
       <View style={styles.cardFooter}>
         <View style={styles.tripDetails}>
+          <Ionicons name="calendar-outline" size={14} color={colors.text.muted} />
+          <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{formatDate(item.departure_time)}</Text>
+        </View>
+        <View style={styles.tripDetails}>
           <Ionicons name="time-outline" size={14} color={colors.text.muted} />
           <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{formatTime(item.departure_time)}</Text>
         </View>
@@ -144,13 +174,18 @@ export default function SearchScreen() {
       </View>
 
       <View style={styles.cardBottom}>
-        <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.price).toLocaleString('es-CO')}</Text>
+        <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.price).toLocaleString(language === 'en' ? 'en-US' : 'es-CO')}</Text>
         <View style={[styles.bookButton, { backgroundColor: colors.secondary.default }]}>
           <Text style={[styles.bookButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.sm, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{s.viewDetails}</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
+
+  React.useEffect(() => {
+    setHasSearched(false);
+    setResults([]);
+  }, [token]);
 
   React.useEffect(() => {
     if (token && !hasSearched) {
@@ -257,15 +292,15 @@ export default function SearchScreen() {
               </View>
             ) : (
               <>
-                <Text style={[styles.resultsTitle, { color: colors.text.primary, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{results.length} {s.resultsFound}</Text>
-                {results.length === 0 ? (
+                <Text style={[styles.resultsTitle, { color: colors.text.primary, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{activeResults.length} {s.resultsFound}</Text>
+                {activeResults.length === 0 ? (
                   <View style={[styles.emptyState, { alignItems: 'center' }]}>
                     <Ionicons name="car-sport-outline" size={64} color={colors.text.muted} />
                     <Text style={[styles.emptyText, { color: colors.text.primary, fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{s.noTrips}</Text>
                     <Text style={[styles.emptySubtext, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{s.noTripsSub}</Text>
                   </View>
                 ) : (
-                  <FlatList data={results} renderItem={renderTripCard} keyExtractor={(item) => item.id} scrollEnabled={false} ItemSeparatorComponent={() => <View style={styles.separator} />} />
+                  <FlatList data={activeResults} renderItem={renderTripCard} keyExtractor={(item) => item.id} scrollEnabled={false} ItemSeparatorComponent={() => <View style={styles.separator} />} />
                 )}
               </>
             )}
@@ -286,9 +321,9 @@ const styles = StyleSheet.create({
   selectorRow: { flexDirection: 'row', alignItems: 'center' },
   selectorWrapper: { flex: 1 },
   clearBtn: { paddingLeft: spacing.sm, paddingBottom: spacing.sm },
-  swapRow: { alignItems: 'center', marginVertical: -spacing.xs },
-  swapLine: { width: 1, height: 20 },
-  swapButton: { width: 36, height: 36, borderRadius: borderRadius.full, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginTop: -18 },
+  swapRow: { alignItems: 'center', marginVertical: spacing.xs },
+  swapLine: { width: 1, height: 24 },
+  swapButton: { width: 36, height: 36, borderRadius: borderRadius.full, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   errorBox: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.md, padding: spacing.sm, marginTop: spacing.sm, gap: spacing.sm },
   errorText: {},
   buttonRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, gap: spacing.sm },

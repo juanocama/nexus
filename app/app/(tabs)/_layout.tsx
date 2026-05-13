@@ -2,10 +2,16 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
 
 export default function TabsLayout() {
   const { t } = useSettings();
   const { colors, typography, spacing } = useTheme();
+  const { user } = useAuth();
+
+  const roles = user?.roles || [];
+  const isPassenger = roles.includes('passenger');
+  const isDriver = roles.includes('driver');
 
   return (
     <Tabs
@@ -49,6 +55,7 @@ export default function TabsLayout() {
         name="search"
         options={{
           title: t.tabs.search,
+          href: isPassenger ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search" size={size} color={color} />
           ),
@@ -58,6 +65,7 @@ export default function TabsLayout() {
         name="publish"
         options={{
           title: t.tabs.publish,
+          href: isDriver ? undefined : null,
           tabBarIcon: ({ size }) => (
             <Ionicons name="add-circle" size={size + 8} color={colors.tertiary.default} />
           ),

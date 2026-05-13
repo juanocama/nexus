@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, Link } from 'expo-router';
+import { useRouter, Link, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import TabHeader from '@/components/TabHeader';
@@ -19,6 +19,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { useAuth } from '@/context/AuthContext';
 import { borderRadius, spacing, shadow, colors } from '@/theme/colors';
 import { tripsApi } from '@/api/trips';
+import { routesApi, FrequentRoute } from '@/api/routes';
 
 const { width } = Dimensions.get('window');
 
@@ -40,26 +41,37 @@ interface Trip {
   notes?: string;
 }
 
-const FREQUENT_ROUTES = [
-  { id: '1', name: 'Puente Madera', time: '7:00 AM', days: 'Lunes y Viernes', destination: 'Universidad de La Sabana' },
-  { id: '2', name: 'Portal Norte', time: '7:30 AM', days: 'Lunes a Viernes', destination: 'Universidad de La Sabana' },
-  { id: '3', name: 'Chicó Norte', time: '6:45 AM', days: 'Martes y Jueves', destination: 'Universidad de La Sabana' },
-];
-
 export default function HomeScreen() {
   const router = useRouter();
-  const { t } = useSettings();
+  const { t, language } = useSettings();
   const { colors, typography, spacing: themeSpacing } = useTheme();
   const { token, user } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(false);
+  const [frequentRoutes, setFrequentRoutes] = useState<FrequentRoute[]>([]);
+  const [loadingRoutes, setLoadingRoutes] = useState(true);
 
   useEffect(() => {
-    loadTrips();
-  }, []);
+    if (token) {
+      loadTrips();
+      loadFrequentRoutes();
+    }
+  }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        loadTrips();
+        loadFrequentRoutes();
+      }
+    }, [token])
+  );
 
   const loadTrips = async () => {
-    if (!token) return;
+    if (!token) {
+      setLoadingTrips(false);
+      return;
+    }
     setLoadingTrips(true);
     try {
       const data = await tripsApi.searchTrips(token);
@@ -68,6 +80,21 @@ export default function HomeScreen() {
       setTrips([]);
     } finally {
       setLoadingTrips(false);
+    }
+  };
+
+  const loadFrequentRoutes = async () => {
+    if (!token) {
+      setLoadingRoutes(false);
+      return;
+    }
+    try {
+      const data = await routesApi.getFrequentRoutes(token);
+      setFrequentRoutes(data || []);
+    } catch {
+      setFrequentRoutes([]);
+    } finally {
+      setLoadingRoutes(false);
     }
   };
 
@@ -83,27 +110,58 @@ export default function HomeScreen() {
 
   const formatTime = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+      return new Date(dateStr).toLocaleTimeString(language === 'en' ? 'en-US' : 'es-CO', { hour: '2-digit', minute: '2-digit' });
     } catch {
       return dateStr;
     }
   };
 
-  const renderFrequentRoute = ({ item }: { item: typeof FREQUENT_ROUTES[0] }) => (
-    <TouchableOpacity style={[styles.routeCard, { backgroundColor: colors.background.card, ...shadow.sm }]}>
-      <View style={styles.routeIcon}>
-        <Ionicons name="car-outline" size={20} color={colors.secondary.default} />
-      </View>
-      <View style={styles.routeInfo}>
-        <Text style={[styles.routeName, { color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{item.name}</Text>
-        <View style={styles.routeMeta}>
-          <Ionicons name="time-outline" size={12} color={colors.text.muted} />
-          <Text style={[styles.routeTime, { color: colors.text.muted, fontSize: typography.sizes.xs, fontFamily: typography.family.regular }]}>{item.time} - {item.days}</Text>
+  const renderFrequentRoute = ({ item, index }: { item: FrequentRoute; index: number }) => {
+    const isPublication = item.type === 'publication';
+    const icon = isPublication ? 'car-sport-outline' : 'car-outline';
+    const iconColor = isPublication ? colors.tertiary.default : colors.secondary.default;
+
+    return (
+      <TouchableOpacity
+        style={[styles.routeCard, { backgroundColor: colors.background.card, ...shadow.sm }]}
+        onPress={() => {
+          if (isPublication) {
+            router.push({
+              pathname: '/(tabs)/publish',
+              params: {
+                tripData: JSON.stringify({
+                  origin_name: item.origin_name,
+                  origin_lat: 0,
+                  origin_lng: 0,
+                  destination_name: item.destination_name,
+                  destination_lat: 0,
+                  destination_lng: 0,
+                }),
+              },
+            });
+          } else {
+            router.push({
+              pathname: '/search',
+              params: { origin: item.origin_name, destination: item.destination_name },
+            });
+          }
+        }}
+      >
+        <View style={[styles.routeIcon, { backgroundColor: isPublication ? colors.tertiary.default + '15' : colors.secondary.default + '15' }]}>
+          <Ionicons name={icon} size={20} color={iconColor} />
         </View>
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
-    </TouchableOpacity>
-  );
+        <View style={styles.routeInfo}>
+          <Text style={[styles.routeName, { color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]} numberOfLines={1}>{item.origin_name}</Text>
+          <View style={styles.routeMeta}>
+            <Ionicons name="arrow-forward" size={12} color={colors.text.muted} />
+            <Text style={[styles.routeTime, { color: colors.text.muted, fontSize: typography.sizes.xs, fontFamily: typography.family.regular }]} numberOfLines={1}>{item.destination_name}</Text>
+          </View>
+          <Text style={[styles.routeTime, { color: colors.text.muted, fontSize: typography.sizes.xs, fontFamily: typography.family.regular, marginTop: 2 }]}>{item.count} {t.trip.trips}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
+      </TouchableOpacity>
+    );
+  };
 
   const renderTripCard = ({ item }: { item: Trip }) => (
     <Link href={`/trip/${item.id}`} asChild>
@@ -114,7 +172,7 @@ export default function HomeScreen() {
               <Text style={[styles.avatarText, { color: colors.primary.contrast, fontSize: typography.sizes.sm, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{item.driver?.full_name?.charAt(0) || '?'}</Text>
             </View>
             <View>
-               <Text style={[styles.driverName, { color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{item.driver?.full_name || 'Desconocido'}</Text>
+               <Text style={[styles.driverName, { color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{item.driver?.full_name || c.unknown}</Text>
                <Text style={[styles.driverFaculty, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{item.driver?.faculty || '-'}</Text>
             </View>
           </View>
@@ -143,20 +201,44 @@ export default function HomeScreen() {
             <Ionicons name="people-outline" size={14} color={colors.text.muted} />
              <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{item.available_seats} {c.seats}</Text>
           </View>
-           <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.md, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.price).toLocaleString('es-CO')}</Text>
+           <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.md, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.price).toLocaleString(language === 'en' ? 'en-US' : 'es-CO')}</Text>
         </View>
       </TouchableOpacity>
     </Link>
   );
 
-  const quickActions = [
-    { title: h.publishTrip, icon: 'add', color: colors.tertiary.default, bg: colors.tertiary.default + '20', href: '/(tabs)/publish' },
-    { title: h.myBookings, icon: 'checkmark-circle', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/bookings' },
-    { title: h.myTrips, icon: 'car-sport', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/bookings' },
-    { title: h.myPublications, icon: 'document-text', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/my-publications' },
-  ];
-
   const displayName = user?.full_name?.split(' ')[0] || 'Carlos';
+
+  const roles = user?.roles || [];
+  const isPassenger = roles.includes('passenger');
+  const isDriver = roles.includes('driver');
+
+  const quickActions = useMemo(() => {
+    const actions = [];
+
+    if (isPassenger || !isDriver) {
+      actions.push(
+        { title: h.myBookings, icon: 'calendar', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/bookings' as const },
+      );
+    }
+    if (isDriver || !isPassenger) {
+      actions.push(
+        { title: h.publishTrip, icon: 'add-circle', color: colors.tertiary.default, bg: colors.tertiary.default + '20', href: '/(tabs)/publish' as const },
+      );
+    }
+    if (isDriver || !isPassenger) {
+      actions.push(
+        { title: h.myPublications, icon: 'document-text', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/my-publications' as const },
+      );
+    }
+    if (isDriver || !isPassenger) {
+      actions.push(
+        { title: h.myVehicles, icon: 'car-sport', color: colors.secondary.default, bg: colors.secondary.default + '20', href: '/my-vehicles' as const },
+      );
+    }
+
+    return actions;
+  }, [isPassenger, isDriver, colors, h]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
@@ -182,21 +264,24 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
-        <View style={styles.section}>
-           <Text style={[styles.sectionTitle, { color: colors.text.primary, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{h.quickActions}</Text>
-          <View style={styles.grid}>
-            {quickActions.map((action, i) => (
-              <Link href={action.href as any} key={i} asChild>
-                <TouchableOpacity style={[styles.gridCard, { backgroundColor: colors.background.card, ...shadow.sm }]}>
-                  <View style={[styles.gridIcon, { backgroundColor: action.bg }]}>
-                    <Ionicons name={action.icon as any} size={22} color={action.color} />
-                  </View>
-                   <Text style={[styles.gridText, { color: colors.text.primary, fontSize: typography.sizes.sm, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{action.title}</Text>
-                </TouchableOpacity>
-              </Link>
-            ))}
+        {quickActions.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.quickActionsGrid}>
+              {quickActions.map((action, i) => (
+                <Link href={action.href as any} key={i} asChild>
+                  <TouchableOpacity style={styles.quickActionCard}>
+                    <View style={[styles.quickActionCardInner, { backgroundColor: action.bg }]}>
+                      <View style={[styles.qaIconBg, { backgroundColor: action.color + '30' }]}>
+                        <Ionicons name={action.icon as any} size={24} color={action.color} />
+                      </View>
+                      <Text style={[styles.qaTitle, { color: colors.text.primary, fontSize: typography.sizes.sm, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{action.title}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </Link>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -206,12 +291,19 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           <FlatList
-            data={FREQUENT_ROUTES}
+            data={frequentRoutes}
             renderItem={renderFrequentRoute}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, i) => `${item.origin_name}|${item.destination_name}|${i}`}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.routeList}
+            ListEmptyComponent={
+              loadingRoutes ? null : (
+                <View style={{ width: width * 0.7, paddingVertical: spacing.md }}>
+                  <Text style={{ color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }}>No hay rutas frecuentes aún</Text>
+                </View>
+              )
+            }
           />
         </View>
 
@@ -225,13 +317,13 @@ export default function HomeScreen() {
           {loadingTrips ? (
             <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
               <ActivityIndicator size="large" color={colors.secondary.default} />
-              <Text style={{ color: colors.text.muted, fontSize: typography.sizes.md, fontFamily: typography.family.regular, marginTop: spacing.sm }}>Cargando viajes...</Text>
+              <Text style={{ color: colors.text.muted, fontSize: typography.sizes.md, fontFamily: typography.family.regular, marginTop: spacing.sm }}>{h.loadingTrips}</Text>
             </View>
           ) : trips.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
               <Ionicons name="car-outline" size={48} color={colors.text.muted} />
-              <Text style={{ color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold, marginTop: spacing.sm }}>No hay viajes disponibles</Text>
-              <Text style={{ color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginTop: spacing.xs }}>Sé el primero en publicar un viaje</Text>
+              <Text style={{ color: colors.text.primary, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold, marginTop: spacing.sm }}>{h.noTripsAvailable}</Text>
+              <Text style={{ color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginTop: spacing.xs }}>{h.beFirstToPublish}</Text>
             </View>
           ) : (
             <FlatList
@@ -254,7 +346,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   greetingSection: {},
   content: { flex: 1 },
-  ctaCard: { marginHorizontal: spacing.lg, marginVertical: spacing.lg, borderRadius: borderRadius.xl, overflow: 'hidden' },
+  ctaCard: { marginHorizontal: spacing.lg, marginVertical: spacing.lg, borderRadius: borderRadius.xl, overflow: 'hidden', padding: spacing.lg },
   ctaGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, minHeight: 120 },
   ctaLeft: { flex: 1 },
   ctaIconBg: { width: 48, height: 48, borderRadius: borderRadius.full, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
@@ -265,10 +357,24 @@ const styles = StyleSheet.create({
   sectionTitle: { marginBottom: spacing.md },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   seeAll: {},
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  gridCard: { width: (width - spacing.lg * 2 - spacing.md) / 2, borderRadius: borderRadius.lg, padding: spacing.md },
-  gridIcon: { width: 44, height: 44, borderRadius: borderRadius.full, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
-  gridText: {},
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+  },
+  quickActionCard: {
+    width: '50%',
+    padding: spacing.xs,
+  },
+  quickActionCardInner: {
+    flex: 1,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qaIconBg: { width: 44, height: 44, borderRadius: borderRadius.full, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
+  qaTitle: { textAlign: 'center' },
   routeList: { gap: spacing.sm },
   routeCard: { width: width * 0.7, borderRadius: borderRadius.lg, padding: spacing.md, flexDirection: 'row', alignItems: 'center', marginRight: spacing.sm },
   routeIcon: { width: 40, height: 40, borderRadius: borderRadius.full, backgroundColor: colors.secondary.default + '15', justifyContent: 'center', alignItems: 'center', marginRight: spacing.sm },

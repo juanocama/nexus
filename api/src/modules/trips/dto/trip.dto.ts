@@ -61,6 +61,11 @@ export class CreateTripDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiProperty({ required: false, example: 'uuid-of-vehicle' })
+  @IsString()
+  @IsOptional()
+  vehicle_id?: string;
 }
 
 export class SearchTripsDto {
@@ -145,4 +150,9 @@ export class UpdateTripDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiProperty({ required: false, example: 'uuid-of-vehicle' })
+  @IsString()
+  @IsOptional()
+  vehicle_id?: string;
 }

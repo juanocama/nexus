@@ -13,6 +13,7 @@ import { Review } from './review.entity';
 import { Notification } from './notification.entity';
 import { SabanaCoinsLedger } from './sabana-coins-ledger.entity';
 import { UserRole as UserRoleEntity } from './user-role.entity';
+import { Vehicle } from './vehicle.entity';
 
 export type UserStatus = 'active' | 'suspended' | 'deactivated';
 
@@ -87,4 +88,7 @@ export class User {
 
   @OneToMany(() => UserRoleEntity, (userRole) => userRole.user, { cascade: true })
   user_roles: UserRoleEntity[];
+
+  @OneToMany(() => Vehicle, (vehicle) => vehicle.driver)
+  vehicles: Vehicle[];
 }

@@ -52,22 +52,30 @@ interface TripDetail {
 export default function TripDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { t } = useSettings();
+  const { t, language } = useSettings();
   const { colors, typography } = useTheme();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [userBooking, setUserBooking] = useState<{ id: string } | null>(null);
 
   useEffect(() => {
     const loadTrip = async () => {
       if (!token || !id) return;
       try {
-        const data = await tripsApi.getTrip(token, id as string);
-        setTrip(data as any);
+        const [tripData, myBookings] = await Promise.all([
+          tripsApi.getTrip(token, id as string),
+          bookingsApi.getMyBookings(token),
+        ]);
+        setTrip(tripData as any);
+        const found = (myBookings as any[]).find(
+          (b: any) => b.trip?.id === id && b.status !== 'cancelled' && b.status !== 'completed'
+        );
+        setUserBooking(found || null);
       } catch {
-        Alert.alert('Error', 'No se pudo cargar el viaje');
+        Alert.alert(t.common.error, t.trip.loadError);
         router.back();
       } finally {
         setLoading(false);
@@ -75,6 +83,36 @@ export default function TripDetailScreen() {
     };
     loadTrip();
   }, [id, token]);
+
+  const handleCancelBooking = useCallback(() => {
+    if (!userBooking) return;
+    Alert.alert(
+      t.bookings.cancelBooking,
+      t.bookings.cancelBooking,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.common.confirm,
+          style: 'destructive',
+          onPress: async () => {
+            if (!token) return;
+            setBooking(true);
+            try {
+              await bookingsApi.cancelBooking(token, userBooking.id);
+              setUserBooking(null);
+              Alert.alert(t.common.success, 'Reserva cancelada');
+            } catch (error: any) {
+              Alert.alert(t.common.error, error.message || t.trip.bookingError);
+            } finally {
+              setBooking(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [userBooking, token, t]);
+
+  const locale = language === 'en' ? 'en-US' : 'es-CO';
 
   const formatDate = (dateStr: string) => {
     try {
@@ -85,9 +123,9 @@ export default function TripDetailScreen() {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const isTomorrow = d.toDateString() === tomorrow.toDateString();
 
-      if (isToday) return `Hoy, ${d.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}`;
-      if (isTomorrow) return `Mañana, ${d.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}`;
-      return d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+      if (isToday) return `${t.common.today}, ${d.toLocaleDateString(locale, { day: 'numeric', month: 'long' })}`;
+      if (isTomorrow) return `${t.common.tomorrow}, ${d.toLocaleDateString(locale, { day: 'numeric', month: 'long' })}`;
+      return d.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
     } catch {
       return dateStr;
     }
@@ -95,7 +133,7 @@ export default function TripDetailScreen() {
 
   const formatTime = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+      return new Date(dateStr).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
     } catch {
       return dateStr;
     }
@@ -106,7 +144,7 @@ export default function TripDetailScreen() {
 
     Alert.alert(
       t.trip.confirmBooking,
-      t.trip.confirmBookingMsg.replace('${price}', `$${Number(trip.price).toLocaleString('es-CO')}`),
+      t.trip.confirmBookingMsg.replace('${price}', `$${Number(trip.price).toLocaleString(locale)}`),
       [
         { text: t.common.cancel, style: 'cancel' },
         {
@@ -117,10 +155,18 @@ export default function TripDetailScreen() {
             try {
               await bookingsApi.createBooking(token, { trip_id: trip.id });
               Alert.alert(t.common.success, t.trip.bookingSuccess, [
-                { text: 'OK', onPress: () => router.replace('/bookings') },
+                { text: t.common.ok, onPress: () => router.replace('/bookings') },
               ]);
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'No se pudo reservar el viaje');
+              const raw = error?.message || '';
+              const knownErrors: Record<string, string> = {
+                'already have a booking': t.trip.alreadyBooked,
+                'No available seats': t.trip.noAvailableSeats,
+                'Cannot book your own trip': t.trip.ownTripHint,
+                'Trip is not available for booking': t.trip.bookingError,
+              };
+              const message = Object.entries(knownErrors).find(([key]) => raw.includes(key))?.[1] || raw || t.trip.bookingError;
+              Alert.alert(t.common.error, message);
             } finally {
               setBooking(false);
             }
@@ -155,7 +201,10 @@ export default function TripDetailScreen() {
 
   const vehicleText = trip.vehicle
     ? `${trip.vehicle.brand} ${trip.vehicle.model} - ${trip.vehicle.color}`
-    : 'Vehiculo no especificado';
+    : t.trip.vehicleUnspecified;
+
+  const isOwnTrip = user?.id === trip.driver?.id;
+  const isPastTrip = new Date(trip.departure_time) < new Date();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
@@ -175,7 +224,7 @@ export default function TripDetailScreen() {
             <Text style={[styles.avatarText, { color: colors.primary.contrast, fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{trip.driver?.full_name?.charAt(0) || '?'}</Text>
           </View>
           <View style={styles.driverInfo}>
-            <Text style={[styles.driverName, { color: colors.text.primary, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{trip.driver?.full_name || 'Desconocido'}</Text>
+            <Text style={[styles.driverName, { color: colors.text.primary, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>{trip.driver?.full_name || t.common.unknown}</Text>
             <Text style={[styles.driverFaculty, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{trip.driver?.faculty || '-'}</Text>
             <View style={styles.driverStats}>
               {typeof trip.driver?.average_rating === 'number' && (
@@ -283,10 +332,44 @@ export default function TripDetailScreen() {
           </View>
         )}
 
+        {isOwnTrip ? (
+          <View style={[styles.ownTripBanner, { backgroundColor: colors.background.card, borderTopColor: colors.border.default }]}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.text.muted} />
+            <Text style={[styles.ownTripLabel, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.medium }]}>{t.trip.ownTripHint}</Text>
+          </View>
+        ) : isPastTrip ? (
+          <View style={[styles.ownTripBanner, { backgroundColor: colors.background.card, borderTopColor: colors.border.default }]}>
+            <Ionicons name="checkmark-circle-outline" size={18} color={colors.text.muted} />
+            <Text style={[styles.ownTripLabel, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.medium }]}>Viaje completado</Text>
+          </View>
+        ) : userBooking ? (
+          <View style={[styles.bookingSection, { backgroundColor: colors.background.card, borderTopColor: colors.border.default }]}>
+            <View style={styles.priceContainer}>
+              <Text style={[styles.priceLabel, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{t.trip.pricePerPerson}</Text>
+              <Text style={[styles.priceValue, { color: colors.tertiary.default, fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(trip.price).toLocaleString(locale)}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.bookButton, { backgroundColor: colors.status.error }]}
+              onPress={handleCancelBooking}
+              disabled={booking}
+            >
+              {booking ? (
+                <ActivityIndicator size="small" color={colors.primary.contrast} />
+              ) : (
+                <>
+                  <Ionicons name="close-circle-outline" size={22} color={colors.primary.contrast} />
+                  <Text style={[styles.bookButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>
+                    Cancelar Reserva
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
         <View style={[styles.bookingSection, { backgroundColor: colors.background.card, borderTopColor: colors.border.default }]}>
           <View style={styles.priceContainer}>
             <Text style={[styles.priceLabel, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{t.trip.pricePerPerson}</Text>
-            <Text style={[styles.priceValue, { color: colors.tertiary.default, fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(trip.price).toLocaleString('es-CO')}</Text>
+            <Text style={[styles.priceValue, { color: colors.tertiary.default, fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(trip.price).toLocaleString(locale)}</Text>
           </View>
           <TouchableOpacity
             style={[styles.bookButton, { backgroundColor: trip.available_seats > 0 ? colors.secondary.default : colors.text.muted }]}
@@ -299,12 +382,13 @@ export default function TripDetailScreen() {
               <>
                 <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary.contrast} />
                 <Text style={[styles.bookButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>
-                  {trip.available_seats === 0 ? 'Sin lugares' : t.trip.bookNow}
+                  {trip.available_seats === 0 ? t.trip.noSeats : t.trip.bookNow}
                 </Text>
               </>
             )}
           </TouchableOpacity>
         </View>
+        )}
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </SafeAreaView>
@@ -370,4 +454,6 @@ const styles = StyleSheet.create({
   priceValue: {},
   bookButton: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
   bookButtonText: { marginLeft: spacing.sm },
+  ownTripBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.lg, borderTopWidth: 1 },
+  ownTripLabel: {},
 });

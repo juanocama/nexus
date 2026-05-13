@@ -37,6 +37,7 @@ class TripsApi {
     total_seats: number;
     price: number;
     notes?: string;
+    vehicle_id?: string;
   }) {
     return this.request('/trips', token, {
       method: 'POST',
@@ -85,6 +86,7 @@ class TripsApi {
     total_seats?: number;
     price?: number;
     notes?: string;
+    vehicle_id?: string;
   }) {
     return this.request(`/trips/${id}`, token, {
       method: 'PUT',

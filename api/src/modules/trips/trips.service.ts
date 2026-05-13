@@ -33,6 +33,7 @@ export class TripsService {
     const queryBuilder = this.tripsRepository
       .createQueryBuilder('trip')
       .leftJoinAndSelect('trip.driver', 'driver')
+      .leftJoinAndSelect('trip.vehicle', 'vehicle')
       .where('trip.status = :status', { status: 'scheduled' });
 
     if (searchDto?.origin) {
@@ -69,7 +70,7 @@ export class TripsService {
   async findOne(id: string): Promise<Trip> {
     const trip = await this.tripsRepository.findOne({
       where: { id },
-      relations: ['driver'],
+      relations: ['driver', 'vehicle'],
     });
 
     if (!trip) {
@@ -82,7 +83,7 @@ export class TripsService {
   async findByDriver(driverId: string): Promise<Trip[]> {
     return this.tripsRepository.find({
       where: { driver: { id: driverId } },
-      relations: ['driver'],
+      relations: ['driver', 'vehicle'],
       order: { departure_time: 'DESC' },
     });
   }

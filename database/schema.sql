@@ -57,12 +57,31 @@ CREATE TABLE user_roles (
 );
 
 -- =====================================================
--- 3. TRIPS
+-- 3. VEHICLES
+-- =====================================================
+
+CREATE TABLE vehicles (
+    id                  UUID                PRIMARY KEY DEFAULT uuid_generate_v4(),
+    driver_id           UUID                NOT NULL REFERENCES users(id),
+    brand               VARCHAR(100)        NOT NULL,
+    model               VARCHAR(100)        NOT NULL,
+    color               VARCHAR(50)         NOT NULL,
+    plate               VARCHAR(20)         NOT NULL,
+    created_at          TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    deleted_at          TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX uq_driver_plate_active ON vehicles(driver_id, plate) WHERE deleted_at IS NULL;
+
+-- =====================================================
+-- 4. TRIPS
 -- =====================================================
 
 CREATE TABLE trips (
     id                  UUID                PRIMARY KEY DEFAULT uuid_generate_v4(),
     driver_id           UUID                NOT NULL REFERENCES users(id),
+    vehicle_id          UUID                REFERENCES vehicles(id),
     origin_name         VARCHAR(255)        NOT NULL,
     origin_lat          DECIMAL(9, 6)       NOT NULL,
     origin_lng          DECIMAL(9, 6)       NOT NULL,
@@ -199,8 +218,12 @@ CREATE TABLE user_devices (
 -- 9. INDEXES FOR PERFORMANCE
 -- =====================================================
 
+-- Vehicles search indexes
+CREATE INDEX idx_vehicles_driver_id ON vehicles(driver_id);
+
 -- Trips search indexes
 CREATE INDEX idx_trips_driver_id ON trips(driver_id);
+CREATE INDEX idx_trips_vehicle_id ON trips(vehicle_id);
 CREATE INDEX idx_trips_status ON trips(status);
 CREATE INDEX idx_trips_departure_time ON trips(departure_time);
 CREATE INDEX idx_trips_departure_time_status ON trips(departure_time, status) WHERE status = 'scheduled';
@@ -248,6 +271,10 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_users_updated_at
     BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_vehicles_updated_at
+    BEFORE UPDATE ON vehicles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER trigger_trips_updated_at
@@ -352,6 +379,7 @@ INSERT INTO review_tags (name, category) VALUES
 -- =====================================================
 
 COMMENT ON TABLE users IS 'Core user table for verified university members';
+COMMENT ON TABLE vehicles IS 'Registered vehicles by drivers for trip assignments';
 COMMENT ON TABLE trips IS 'Published trips by drivers with route and seat details';
 COMMENT ON TABLE bookings IS 'Seat reservations linking passengers to trips';
 COMMENT ON TABLE payments IS 'Payment records for completed bookings';

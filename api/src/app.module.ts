@@ -12,6 +12,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SabanaCoinsModule } from './modules/sabana-coins/sabana-coins.module';
+import { VehiclesModule } from './modules/vehicles/vehicles.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { SabanaCoinsModule } from './modules/sabana-coins/sabana-coins.module';
     ReviewsModule,
     NotificationsModule,
     SabanaCoinsModule,
+    VehiclesModule,
   ],
   providers: [
     {
