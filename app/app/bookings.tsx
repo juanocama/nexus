@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  TextStyle,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { borderRadius, spacing, shadow } from '@/theme/colors';
@@ -50,6 +51,11 @@ async function launchPayment(bookingId: string, token: string): Promise<void> {
 export default function BookingsScreen() {
   const router = useRouter();
   const { colors, typography } = useTheme();
+  const fontWeight = {
+    semibold: typography.weights.semibold as TextStyle['fontWeight'],
+    medium: typography.weights.medium as TextStyle['fontWeight'],
+    bold: typography.weights.bold as TextStyle['fontWeight'],
+  };
   const { t, language } = useSettings();
   const { token, user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
@@ -177,10 +183,14 @@ export default function BookingsScreen() {
     const statusStyle = getStatusColor(item.status);
     const isDriver = user?.id === item.trip.driver?.id;
     const isFutureTrip = new Date(item.trip.departure_time) >= now;
-    const isPaid = item.payment?.status === 'success';
-    const isPayable = !isDriver && item.status === 'confirmed' && isFutureTrip && !isPaid;
-    const isCancellable = !isDriver && item.status === 'confirmed' && isFutureTrip;
+    const paymentStatus = item.payment?.status;
+    const isPaid = paymentStatus === 'success';
+    const isPaymentPending = paymentStatus === 'pending';
+    const isPaymentRetryable = !paymentStatus || paymentStatus === 'failed' || paymentStatus === 'refunded';
+    const isPayable = !isDriver && item.status === 'confirmed' && isFutureTrip && isPaymentRetryable;
+    const isCancellable = !isDriver && item.status === 'confirmed' && isFutureTrip && !isPaid && !isPaymentPending;
     const isPaying = payingId === item.id;
+    const shouldShowActions = isPaid || isPaymentPending || isPayable || isCancellable;
 
     return (
       <TouchableOpacity
@@ -191,11 +201,11 @@ export default function BookingsScreen() {
         {/* Header: status + role badge */}
         <View style={styles.cardHeader}>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-            <Text style={[styles.statusText, { color: statusStyle.text, fontSize: typography.sizes.xs, fontWeight: typography.weights.semibold, fontFamily: typography.family.semibold }]}>{statusStyle.label}</Text>
+            <Text style={[styles.statusText, { color: statusStyle.text, fontSize: typography.sizes.xs, fontWeight: fontWeight.semibold, fontFamily: typography.family.semibold }]}>{statusStyle.label}</Text>
           </View>
           <View style={[styles.typeBadge, { backgroundColor: colors.background.default }]}>
             <Ionicons name={isDriver ? 'car-sport' : 'person'} size={14} color={colors.secondary.default} />
-            <Text style={[styles.typeText, { color: colors.secondary.default, fontSize: typography.sizes.sm, fontWeight: typography.weights.medium, fontFamily: typography.family.medium }]}>
+            <Text style={[styles.typeText, { color: colors.secondary.default, fontSize: typography.sizes.sm, fontWeight: fontWeight.medium, fontFamily: typography.family.medium }]}>
               {isDriver ? t.common.driver : t.common.passenger}
             </Text>
           </View>
@@ -224,16 +234,21 @@ export default function BookingsScreen() {
             <Ionicons name="time-outline" size={14} color={colors.text.muted} />
             <Text style={[styles.detailText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.regular, marginLeft: spacing.xs }]}>{formatTime(item.trip.departure_time)}</Text>
           </View>
-          <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, fontFamily: typography.family.bold }]}>${Number(item.trip.price).toLocaleString(language === 'en' ? 'en-US' : 'es-CO')}</Text>
+          <Text style={[styles.priceText, { color: colors.tertiary.default, fontSize: typography.sizes.lg, fontWeight: fontWeight.bold, fontFamily: typography.family.bold }]}>${Number(item.trip.price).toLocaleString(language === 'en' ? 'en-US' : 'es-CO')}</Text>
         </View>
 
         {/* Acciones: Pagar + Cancelar (solo pasajero, confirmado, futuro) */}
-        {(isPayable || isCancellable || item.payment?.status === 'success') && (
+        {shouldShowActions && (
           <View style={[styles.actionsRow, { borderTopColor: colors.border.default }]}> 
             {isPaid ? (
               <View style={[styles.paidBadge, { backgroundColor: colors.status.successBg }]}> 
                 <Ionicons name="checkmark-circle" size={16} color={colors.status.success} />
                 <Text style={[styles.paidText, { color: colors.status.success, fontFamily: typography.family.semibold }]}>Pagado</Text>
+              </View>
+            ) : isPaymentPending ? (
+              <View style={[styles.paidBadge, { backgroundColor: colors.status.warningBg }]}> 
+                <Ionicons name="time-outline" size={16} color={colors.status.warning} />
+                <Text style={[styles.paidText, { color: colors.status.warning, fontFamily: typography.family.semibold }]}>Pago pendiente</Text>
               </View>
             ) : isPayable ? (
               <TouchableOpacity
@@ -251,13 +266,14 @@ export default function BookingsScreen() {
                 )}
               </TouchableOpacity>
             ) : null}
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.status.errorBg, borderWidth: 1, borderColor: colors.status.error }]}
-                onPress={() => handleCancel(item)}
-              >
-                <Ionicons name="close-outline" size={16} color={colors.status.error} />
-                <Text style={[styles.actionButtonText, { color: colors.status.error }]}>{t.bookings.cancelBooking}</Text>
-              </TouchableOpacity>
+            {isCancellable && (
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.status.errorBg, borderWidth: 1, borderColor: colors.status.error }]}
+                  onPress={() => handleCancel(item)}
+                >
+                  <Ionicons name="close-outline" size={16} color={colors.status.error} />
+                  <Text style={[styles.actionButtonText, { color: colors.status.error }]}>{t.bookings.cancelBooking}</Text>
+                </TouchableOpacity>
             )}
           </View>
         )}
@@ -285,7 +301,7 @@ export default function BookingsScreen() {
           style={[styles.tab, { marginRight: spacing.lg }, activeTab === 'upcoming' && { borderBottomColor: colors.secondary.default }]}
           onPress={() => setActiveTab('upcoming')}
         >
-          <Text style={[styles.tabText, { color: colors.text.muted }, activeTab === 'upcoming' && { color: colors.secondary.default, fontWeight: typography.weights.semibold }]}>
+          <Text style={[styles.tabText, { color: colors.text.muted }, activeTab === 'upcoming' && { color: colors.secondary.default, fontWeight: fontWeight.semibold }]}>
             {t.bookings.upcoming}
           </Text>
           {upcoming.length > 0 && (
@@ -300,7 +316,7 @@ export default function BookingsScreen() {
           style={[styles.tab, { marginRight: spacing.lg }, activeTab === 'past' && { borderBottomColor: colors.secondary.default }]}
           onPress={() => setActiveTab('past')}
         >
-          <Text style={[styles.tabText, { color: colors.text.muted }, activeTab === 'past' && { color: colors.secondary.default, fontWeight: typography.weights.semibold }]}>
+          <Text style={[styles.tabText, { color: colors.text.muted }, activeTab === 'past' && { color: colors.secondary.default, fontWeight: fontWeight.semibold }]}>
             {t.bookings.history}
           </Text>
         </TouchableOpacity>

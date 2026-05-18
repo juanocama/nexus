@@ -305,7 +305,10 @@ export default function TripDetailScreen() {
 
   const isOwnTrip = user?.id === trip.driver?.id;
   const isPastTrip = new Date(trip.departure_time) < new Date();
-  const isPaid = userBooking?.payment?.status === 'success';
+  const paymentStatus = userBooking?.payment?.status;
+  const isPaid = paymentStatus === 'success';
+  const isPaymentPending = paymentStatus === 'pending';
+  const canRetryPayment = !paymentStatus || paymentStatus === 'failed' || paymentStatus === 'refunded';
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
@@ -329,12 +332,12 @@ export default function TripDetailScreen() {
             <Text style={[styles.driverName, { color: colors.text.primary, fontSize: typography.sizes.lg, fontWeight: fontWeight.bold, fontFamily: fontFamily.bold }]}>{trip.driver?.full_name || t.common.unknown}</Text>
             <Text style={[styles.driverFaculty, { color: colors.text.muted, fontSize: typography.sizes.sm, fontFamily: typography.family.regular }]}>{trip.driver?.faculty || '-'}</Text>
             <View style={styles.driverStats}>
-              {typeof trip.driver?.average_rating === 'number' && (
+              {typeof trip.driver?.average_rating === 'number' ? (
                 <View style={[styles.statBadge, { backgroundColor: '#FEF3C7' }]}>
                   <Ionicons name="star" size={14} color="#F59E0B" />
                   <Text style={[styles.statText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.medium }]}>{trip.driver.average_rating.toFixed(1)}</Text>
                 </View>
-              )}
+              ) : null}
               {trip.driver?.total_trips ? (
                 <Text style={[styles.statText, { color: colors.text.secondary, fontSize: typography.sizes.sm, fontFamily: typography.family.medium }]}>
                   {trip.driver.total_trips} {t.trip.trips}
@@ -463,7 +466,12 @@ export default function TripDetailScreen() {
                   <Ionicons name="checkmark-circle-outline" size={20} color={colors.status.success} />
                   <Text style={[styles.bookButtonText, { color: colors.status.success, fontSize: typography.sizes.sm, fontWeight: fontWeight.semibold, fontFamily: fontFamily.semibold }]}>Reserva pagada</Text>
                 </View>
-              ) : (
+              ) : isPaymentPending ? (
+                <View style={[styles.paidBanner, { backgroundColor: colors.status.warningBg }]}> 
+                  <Ionicons name="time-outline" size={20} color={colors.status.warning} />
+                  <Text style={[styles.bookButtonText, { color: colors.status.warning, fontSize: typography.sizes.sm, fontWeight: fontWeight.semibold, fontFamily: fontFamily.semibold }]}>Pago pendiente</Text>
+                </View>
+              ) : canRetryPayment ? (
                 <TouchableOpacity
                 style={[styles.payButton, { backgroundColor: colors.secondary.default }]}
                 onPress={handlePayExisting}
@@ -480,12 +488,12 @@ export default function TripDetailScreen() {
                   </>
                 )}
               </TouchableOpacity>
-              )}
+              ) : null}
               {/* Botón Cancelar */}
               <TouchableOpacity
-                style={[styles.cancelButton, { backgroundColor: colors.status.error }]}
+                style={[styles.cancelButton, { backgroundColor: colors.status.error }, (isPaid || isPaymentPending) && styles.hiddenButton]}
                 onPress={handleCancelBooking}
-                disabled={booking}
+                disabled={booking || isPaid || isPaymentPending}
               >
                 <Ionicons name="close-circle-outline" size={20} color={colors.primary.contrast} />
                 <Text style={[styles.bookButtonText, { color: colors.primary.contrast, fontSize: typography.sizes.sm, fontWeight: fontWeight.semibold, fontFamily: fontFamily.semibold }]}>
@@ -607,6 +615,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+  },
+  hiddenButton: {
+    display: 'none',
   },
   bookButtonText: { marginLeft: spacing.xs },
   paidBanner: {

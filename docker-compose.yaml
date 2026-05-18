@@ -11,3 +11,27 @@ services:
       POSTGRES_DB: nexus
     ports:
       - "5433:5432"
+
+  jmeter:
+    image: justb4/jmeter:latest
+    profiles:
+      - tools
+    volumes:
+      - ./jmeter:/jmeter
+    command:
+      - -n
+      - -t
+      - /jmeter/payment-verify.jmx
+      - -l
+      - /jmeter/results/payment-verify-compose.jtl
+      - -e
+      - -o
+      - /jmeter/results/payment-verify-compose-report
+      - -JAPI_BASE_URL=${API_BASE_URL:-http://host.docker.internal:3000/api/v1}
+      - -JTOKEN=${TOKEN:-}
+      - -JBOOKING_ID=${BOOKING_ID:-66666666-6666-6666-6666-666666666666}
+      - -JPREFERENCE_ID=${PREFERENCE_ID:-jmeter-compose}
+      - -JCOLLECTION_STATUS=${COLLECTION_STATUS:-approved}
+      - -JTHREADS=${THREADS:-10}
+      - -JLOOPS=${LOOPS:-5}
+      - -JRAMP_SECONDS=${RAMP_SECONDS:-5}

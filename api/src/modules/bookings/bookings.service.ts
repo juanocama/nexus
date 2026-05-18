@@ -14,6 +14,24 @@ export class BookingsService {
     private tripsRepository: Repository<Trip>,
   ) {}
 
+  private sanitizeBookingUsers<T extends Booking | Booking[]>(bookingOrBookings: T): T {
+    const bookings = Array.isArray(bookingOrBookings) ? bookingOrBookings : [bookingOrBookings];
+
+    for (const booking of bookings) {
+      const passenger = booking.passenger as any;
+      const driver = booking.trip?.driver as any;
+
+      for (const user of [passenger, driver]) {
+        if (!user) continue;
+        delete user.password_hash;
+        delete user.ms_graph_token;
+        delete user.refresh_token;
+      }
+    }
+
+    return bookingOrBookings;
+  }
+
   async create(createDto: CreateBookingDto, passengerId: string): Promise<Booking> {
     const trip = await this.tripsRepository.findOne({ where: { id: createDto.trip_id } });
 
@@ -62,21 +80,25 @@ export class BookingsService {
   }
 
   async findByPassenger(passengerId: string): Promise<Booking[]> {
-    return this.bookingsRepository.find({
+    const bookings = await this.bookingsRepository.find({
       where: { passenger: { id: passengerId } },
       relations: ['trip', 'trip.driver', 'payment'],
       order: { booked_at: 'DESC' },
     });
+
+    return this.sanitizeBookingUsers(bookings);
   }
 
   async findByDriver(driverId: string): Promise<Booking[]> {
-    return this.bookingsRepository
+    const bookings = await this.bookingsRepository
       .createQueryBuilder('booking')
       .leftJoinAndSelect('booking.trip', 'trip')
       .leftJoinAndSelect('booking.passenger', 'passenger')
       .where('trip.driver_id = :driverId', { driverId })
       .orderBy('booking.booked_at', 'DESC')
       .getMany();
+
+    return this.sanitizeBookingUsers(bookings);
   }
 
   async findById(id: string): Promise<Booking> {
@@ -89,7 +111,7 @@ export class BookingsService {
       throw new NotFoundException('Booking not found');
     }
 
-    return booking;
+    return this.sanitizeBookingUsers(booking);
   }
 
   async cancelBooking(id: string, userId: string): Promise<Booking> {

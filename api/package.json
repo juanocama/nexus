@@ -9,6 +9,9 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "traffic:payments": "node scripts/simulate-payment-traffic.js",
+    "traffic:jmeter": "powershell -ExecutionPolicy Bypass -File ../jmeter/run-payments.ps1",
+    "traffic:jmeter:token": "node scripts/create-test-jwt.js",
     "migration:generate": "typeorm migration:generate -d src/database/data-source.ts",
     "migration:run": "typeorm migration:run -d src/database/data-source.ts",
     "schema:sync": "typeorm schema:sync -d src/database/data-source.ts"

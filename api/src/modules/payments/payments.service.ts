@@ -56,6 +56,10 @@ export class PaymentsService {
       throw new BadRequestException('Only confirmed bookings can be paid');
     }
 
+    if (new Date(booking.trip.departure_time).getTime() <= Date.now()) {
+      throw new BadRequestException('Past trips cannot be paid');
+    }
+
     const existingPayment = await this.paymentsRepository.findOne({
       where: { booking_id: createDto.booking_id },
     });
@@ -69,7 +73,7 @@ export class PaymentsService {
     }
 
     const preferenceClient = this.buildMercadoPagoPreference();
-    const frontendUrl = process.env.FRONTEND_URL;
+    const frontendUrl = process.env.FRONTEND_URL?.trim();
     if (!frontendUrl) {
       throw new InternalServerErrorException('FRONTEND_URL is required to build Mercado Pago return URLs');
     }
@@ -127,17 +131,8 @@ export class PaymentsService {
 
     const providerResponse = result.body ?? result;
 
-    if (existingPayment) {
-      existingPayment.status = 'pending';
-      existingPayment.amount = Number(booking.trip.price);
-      existingPayment.method = 'card';
-      existingPayment.provider_reference = preferenceId;
-      existingPayment.provider_response = providerResponse;
-      existingPayment.paid_at = null;
-      await this.paymentsRepository.save(existingPayment);
-    } else {
-      const payment = this.paymentsRepository.create({
-        booking: { id: booking.id },
+    await this.paymentsRepository.upsert(
+      {
         booking_id: booking.id,
         amount: Number(booking.trip.price),
         method: 'card',
@@ -145,9 +140,9 @@ export class PaymentsService {
         provider_reference: preferenceId,
         provider_response: providerResponse,
         paid_at: null,
-      });
-      await this.paymentsRepository.save(payment);
-    }
+      },
+      ['booking_id'],
+    );
 
     return {
       checkout_url: checkoutUrl,
@@ -161,7 +156,7 @@ export class PaymentsService {
     user: { id: string; email?: string },
   ): Promise<{ payment_status: PaymentStatus; paid_at: Date | null }> {
     const payment = await this.paymentsRepository.findOne({
-      where: { booking: { id: verifyDto.external_reference } },
+      where: { booking_id: verifyDto.external_reference },
       relations: ['booking'],
     });
 
@@ -173,7 +168,7 @@ export class PaymentsService {
       throw new ForbiddenException('Booking does not belong to the authenticated user');
     }
 
-    if (verifyDto.preference_id) {
+    if (verifyDto.preference_id && payment.status !== 'success') {
       payment.provider_reference = verifyDto.preference_id;
     }
 
@@ -188,10 +183,10 @@ export class PaymentsService {
     const status = verifyDto.collection_status?.toLowerCase();
     if (status === 'approved') {
       payment.status = 'success';
-      payment.paid_at = new Date();
-    } else if (status === 'pending') {
+      payment.paid_at = payment.paid_at ?? new Date();
+    } else if (status === 'pending' && payment.status !== 'success') {
       payment.status = 'pending';
-    } else if (status) {
+    } else if (status && payment.status !== 'success') {
       payment.status = 'failed';
     }
 
