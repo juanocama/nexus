@@ -17,11 +17,15 @@ import { borderRadius, spacing, shadow, colors } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
+import { paymentsApi } from '@/api/payments';
+import { CONFIG } from '@/utils/config';
 
 export default function AddCardScreen() {
   const router = useRouter();
   const { t } = useSettings();
   const { colors, typography } = useTheme();
+  const { token } = useAuth();
   const a = t.addCard;
 
   const [cardNumber, setCardNumber] = useState('');
@@ -30,6 +34,7 @@ export default function AddCardScreen() {
   const [cvv, setCvv] = useState('');
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [cardType, setCardType] = useState<'credit' | 'debit'>('credit');
+  const [isSaving, setIsSaving] = useState(false);
 
   const formatCardNumber = (text: string) => {
     const cleaned = text.replace(/\D/g, '').slice(0, 16);
@@ -52,18 +57,51 @@ export default function AddCardScreen() {
     return null;
   };
 
-  const handleSave = () => {
+  const buildCardPayload = () => {
     const cleaned = cardNumber.replace(/\s/g, '');
-    if (cleaned.length < 16 || !cardHolder || expiry.length < 5 || cvv.length < 3) {
+    const [month, year] = expiry.split('/');
+
+    return {
+      dev_card_data: {
+        card_number: cleaned,
+        expiration_month: month,
+        expiration_year: `20${year}`,
+        security_code: cvv,
+      },
+      is_default: setAsDefault,
+    };
+  };
+
+  const handleSave = async () => {
+    const cleaned = cardNumber.replace(/\s/g, '');
+    if (cleaned.length < 13 || !cardHolder || expiry.length < 5 || cvv.length < 3) {
       Alert.alert(a.error, a.fillAllFields);
       return;
     }
 
-    Alert.alert(
-      a.cardSaved,
-      a.cardSavedMsg,
-      [{ text: t.common.ok, onPress: () => router.back() }]
-    );
+    if (!token) {
+      Alert.alert(a.error, 'Debes iniciar sesion para guardar tarjetas.');
+      return;
+    }
+
+    if (!CONFIG.PAYMENTS.ALLOW_DEV_CARD_TOKENIZATION && !CONFIG.PAYMENTS.MERCADO_PAGO_PUBLIC_KEY) {
+      Alert.alert(a.error, 'Configura la llave publica de Mercado Pago para tokenizar la tarjeta.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await paymentsApi.addCard(token, buildCardPayload());
+      Alert.alert(
+        a.cardSaved,
+        a.cardSavedMsg,
+        [{ text: t.common.ok, onPress: () => router.back() }]
+      );
+    } catch (error: any) {
+      Alert.alert(a.error, error.message || 'No se pudo guardar la tarjeta.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const cardBrand = detectCardType(cardNumber);
@@ -219,9 +257,9 @@ export default function AddCardScreen() {
             </Text>
           </View>
 
-          <TouchableOpacity style={[styles.saveButton, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.secondary.default, borderRadius: borderRadius.md, paddingVertical: spacing.md, ...shadow.md }]} onPress={handleSave}>
-            <Ionicons name="checkmark" size={20} color={colors.primary.contrast} />
-            <Text style={[styles.saveButtonText, { fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, color: colors.primary.contrast, marginLeft: spacing.sm, fontFamily: typography.family.semibold }]}>{a.saveCard}</Text>
+          <TouchableOpacity disabled={isSaving} style={[styles.saveButton, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.secondary.default, borderRadius: borderRadius.md, paddingVertical: spacing.md, opacity: isSaving ? 0.7 : 1, ...shadow.md }]} onPress={handleSave}>
+            <Ionicons name={isSaving ? 'hourglass-outline' : 'checkmark'} size={20} color={colors.primary.contrast} />
+            <Text style={[styles.saveButtonText, { fontSize: typography.sizes.md, fontWeight: typography.weights.semibold, color: colors.primary.contrast, marginLeft: spacing.sm, fontFamily: typography.family.semibold }]}>{isSaving ? 'Guardando...' : a.saveCard}</Text>
           </TouchableOpacity>
         </View>
         <View style={{ height: spacing.xxl }} />

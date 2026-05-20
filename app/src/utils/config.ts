@@ -14,6 +14,10 @@ export const CONFIG = {
       : 'https://api.nexus.unisabana.edu.co/api/v1',
     TIMEOUT: 15000,
   },
+  PAYMENTS: {
+    MERCADO_PAGO_PUBLIC_KEY: '',
+    ALLOW_DEV_CARD_TOKENIZATION: __DEV__,
+  },
   VALIDATION: {
     MIN_PASSWORD_LENGTH: 8,
     MAX_NAME_LENGTH: 100,

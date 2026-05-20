@@ -11,6 +11,36 @@ export interface VerifyPaymentResponse {
   paid_at: string | null;
 }
 
+export interface SavedPaymentCard {
+  id: string;
+  brand: string;
+  payment_type: string | null;
+  last_four: string;
+  exp_month: number;
+  exp_year: number;
+  cardholder_name: string | null;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface AddPaymentCardPayload {
+  card_token?: string;
+  dev_card_data?: {
+    card_number: string;
+    expiration_month: string;
+    expiration_year: string;
+    security_code: string;
+  };
+  is_default?: boolean;
+}
+
+export interface PayWithSavedCardPayload {
+  booking_id: string;
+  card_id: string;
+  security_code: string;
+  installments?: number;
+}
+
 class PaymentsApi {
   private baseURL: string;
 
@@ -50,6 +80,39 @@ class PaymentsApi {
     collection_status?: string;
   }): Promise<VerifyPaymentResponse> {
     return this.request<VerifyPaymentResponse>('/payments/verify', token, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async listCards(token: string): Promise<SavedPaymentCard[]> {
+    return this.request<SavedPaymentCard[]>('/payments/cards', token);
+  }
+
+  async addCard(token: string, payload: AddPaymentCardPayload): Promise<SavedPaymentCard> {
+    return this.request<SavedPaymentCard>('/payments/cards', token, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async setDefaultCard(token: string, cardId: string): Promise<SavedPaymentCard> {
+    return this.request<SavedPaymentCard>(`/payments/cards/${cardId}/default`, token, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_default: true }),
+    });
+  }
+
+  async deleteCard(token: string, cardId: string): Promise<{ deleted: true }> {
+    return this.request<{ deleted: true }>(`/payments/cards/${cardId}`, token, {
+      method: 'DELETE',
+    });
+  }
+
+  async payWithSavedCard(token: string, payload: PayWithSavedCardPayload): Promise<VerifyPaymentResponse & {
+    provider_reference: string | null;
+  }> {
+    return this.request<VerifyPaymentResponse & { provider_reference: string | null }>('/payments/pay-with-card', token, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

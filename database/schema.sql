@@ -134,6 +134,26 @@ CREATE TABLE payments (
     updated_at          TIMESTAMPTZ         NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE payment_cards (
+    id                  UUID                PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id             UUID                NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    mp_customer_id      VARCHAR(255)        NOT NULL,
+    mp_card_id          VARCHAR(255)        NOT NULL,
+    brand               VARCHAR(80)         NOT NULL,
+    payment_type        VARCHAR(40),
+    last_four           VARCHAR(4)          NOT NULL,
+    first_six           VARCHAR(6),
+    exp_month           INTEGER             NOT NULL,
+    exp_year            INTEGER             NOT NULL,
+    cardholder_name     VARCHAR(255),
+    is_default          BOOLEAN             NOT NULL DEFAULT FALSE,
+    provider_response   JSONB,
+    created_at          TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT uq_payment_cards_provider_card UNIQUE (mp_customer_id, mp_card_id)
+);
+
 -- =====================================================
 -- 6. REVIEWS & RATINGS
 -- =====================================================
@@ -239,6 +259,8 @@ CREATE INDEX idx_bookings_trip_status ON bookings(trip_id, status);
 -- Payments search indexes
 CREATE INDEX idx_payments_booking_id ON payments(booking_id);
 CREATE INDEX idx_payments_status ON payments(status);
+CREATE INDEX idx_payment_cards_user_id ON payment_cards(user_id);
+CREATE UNIQUE INDEX uq_payment_cards_default_per_user ON payment_cards(user_id) WHERE is_default = TRUE;
 
 -- Reviews search indexes
 CREATE INDEX idx_reviews_reviewer_id ON reviews(reviewer_id);
@@ -283,6 +305,10 @@ CREATE TRIGGER trigger_trips_updated_at
 
 CREATE TRIGGER trigger_payments_updated_at
     BEFORE UPDATE ON payments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_payment_cards_updated_at
+    BEFORE UPDATE ON payment_cards
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER trigger_user_devices_updated_at
@@ -383,6 +409,7 @@ COMMENT ON TABLE vehicles IS 'Registered vehicles by drivers for trip assignment
 COMMENT ON TABLE trips IS 'Published trips by drivers with route and seat details';
 COMMENT ON TABLE bookings IS 'Seat reservations linking passengers to trips';
 COMMENT ON TABLE payments IS 'Payment records for completed bookings';
+COMMENT ON TABLE payment_cards IS 'Tokenized Mercado Pago cards saved by users; never stores PAN or CVV';
 COMMENT ON TABLE reviews IS 'User ratings and reviews after completed trips';
 COMMENT ON TABLE sabana_coins_ledger IS 'Ledger for Sabana Coins incentive transactions';
 COMMENT ON TABLE notifications IS 'Push and in-app notifications for users';
