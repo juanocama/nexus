@@ -288,6 +288,14 @@ export default function ProfileScreen() {
               <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
             </TouchableOpacity>
             <View style={[styles.optionDivider, { backgroundColor: colors.border.default, marginHorizontal: spacing.md }]} />
+            <TouchableOpacity style={[styles.optionRow, { paddingHorizontal: spacing.md, paddingVertical: spacing.md }]} onPress={() => router.push('/settings/support-report')}>
+              <View style={styles.optionLeft}>
+                <Ionicons name="bug-outline" size={20} color={colors.status.error} />
+                <Text style={[styles.optionText, { fontSize: typography.sizes.md, fontFamily: typography.family.medium, color: colors.text.primary }]}>Reportar bug o sugerencia</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
+            <View style={[styles.optionDivider, { backgroundColor: colors.border.default, marginHorizontal: spacing.md }]} />
             <TouchableOpacity style={[styles.optionRow, { paddingHorizontal: spacing.md, paddingVertical: spacing.md }]} onPress={() => router.push('/settings')}>
               <View style={styles.optionLeft}>
                 <Ionicons name="settings-outline" size={20} color={colors.secondary.default} />

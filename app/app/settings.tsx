@@ -114,6 +114,7 @@ export default function SettingsScreen() {
       key: 'information',
       items: [
         { id: 'about', title: s.about.title, subtitle: s.about.subtitle, icon: 'information-circle-outline', route: '/settings/about', iconColor: colors.secondary.default },
+        { id: 'support-report', title: 'Reportar bug o sugerencia', subtitle: 'Envia comentarios al equipo de soporte', icon: 'bug-outline', route: '/settings/support-report', iconColor: colors.status.error },
       ],
     },
   ];

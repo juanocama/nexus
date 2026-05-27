@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MailerModule } from '@nestjs-modules/mailer';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -13,6 +14,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SabanaCoinsModule } from './modules/sabana-coins/sabana-coins.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 
 
@@ -23,6 +25,23 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     }),
 
     TypeOrmModule.forRoot(databaseConfig),
+
+    MailerModule.forRootAsync({
+      useFactory: () => ({
+        transport: {
+          host: 'smtp.resend.com',
+          port: 465,
+          secure: true,
+          auth: {
+            user: 'resend',
+            pass: process.env.RESEND_API_KEY,
+          },
+        },
+        defaults: {
+          from: `"NEXUS Soporte" <${process.env.SUPPORT_EMAIL_FROM}>`,
+        },
+      }),
+    }),
 
     ThrottlerModule.forRoot([{
       ttl: 60000,
@@ -38,6 +57,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     NotificationsModule,
     SabanaCoinsModule,
     VehiclesModule,
+    ReportsModule,
   ],
 
   // providers: [

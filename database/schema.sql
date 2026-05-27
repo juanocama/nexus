@@ -24,6 +24,8 @@ CREATE TYPE payment_method_enum AS ENUM ('pse', 'card', 'sabana_points');
 CREATE TYPE payment_status_enum AS ENUM ('pending', 'success', 'failed', 'refunded');
 CREATE TYPE notification_type_enum AS ENUM ('booking_confirmed', 'booking_cancelled', 'trip_cancelled', 'trip_modified', 'payment_received', 'rating_received', 'sabana_coins_earned');
 CREATE TYPE coin_type_enum AS ENUM ('earned', 'spent', 'redeemed', 'bonus');
+CREATE TYPE report_type_enum AS ENUM ('bug', 'suggestion', 'other');
+CREATE TYPE report_status_enum AS ENUM ('open', 'in_progress', 'resolved');
 
 -- =====================================================
 -- 2. USERS & AUTHENTICATION
@@ -235,7 +237,23 @@ CREATE TABLE user_devices (
 );
 
 -- =====================================================
--- 9. INDEXES FOR PERFORMANCE
+-- 9. REPORTS & FEEDBACK
+-- =====================================================
+
+CREATE TABLE reports (
+    id              UUID                PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID                NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type            report_type_enum    NOT NULL,
+    title           VARCHAR(255)        NOT NULL,
+    description     TEXT                NOT NULL,
+    device_info     VARCHAR(255),
+    app_version     VARCHAR(50),
+    status          report_status_enum  NOT NULL DEFAULT 'open',
+    created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+-- =====================================================
+-- 10. INDEXES FOR PERFORMANCE
 -- =====================================================
 
 -- Vehicles search indexes
@@ -279,8 +297,13 @@ CREATE INDEX idx_sabana_coins_type ON sabana_coins_ledger(type);
 CREATE INDEX idx_user_devices_user_id ON user_devices(user_id);
 CREATE INDEX idx_user_devices_token ON user_devices(expo_push_token);
 
+-- Reports indexes
+CREATE INDEX idx_reports_user_id ON reports(user_id);
+CREATE INDEX idx_reports_created_at ON reports(created_at);
+CREATE INDEX idx_reports_status ON reports(status);
+
 -- =====================================================
--- 10. TRIGGERS FOR AUTOMATED FIELDS
+-- 11. TRIGGERS FOR AUTOMATED FIELDS
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -385,7 +408,7 @@ CREATE TRIGGER trigger_increment_total_trips
     FOR EACH ROW EXECUTE FUNCTION increment_total_trips();
 
 -- =====================================================
--- 11. SEED DATA (INITIAL REVIEW TAGS)
+-- 12. SEED DATA (INITIAL REVIEW TAGS)
 -- =====================================================
 
 INSERT INTO review_tags (name, category) VALUES
@@ -401,7 +424,7 @@ INSERT INTO review_tags (name, category) VALUES
     ('flexible con horario', 'comportamiento');
 
 -- =====================================================
--- 12. COMMENTS FOR DOCUMENTATION
+-- 13. COMMENTS FOR DOCUMENTATION
 -- =====================================================
 
 COMMENT ON TABLE users IS 'Core user table for verified university members';
@@ -414,3 +437,4 @@ COMMENT ON TABLE reviews IS 'User ratings and reviews after completed trips';
 COMMENT ON TABLE sabana_coins_ledger IS 'Ledger for Sabana Coins incentive transactions';
 COMMENT ON TABLE notifications IS 'Push and in-app notifications for users';
 COMMENT ON TABLE user_devices IS 'Device tokens for push notification delivery';
+COMMENT ON TABLE reports IS 'User-submitted bug reports, suggestions, and support feedback';
