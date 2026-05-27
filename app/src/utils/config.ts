@@ -10,7 +10,7 @@ export const CONFIG = {
   },
   API: {
     BASE_URL: __DEV__
-      ? 'http://10.147.108.227:3000/api/v1'
+      ? 'http://192.168.1.16:3000/api/v1'
       : 'https://api.nexus.unisabana.edu.co/api/v1',
     TIMEOUT: 15000,
   },
