@@ -11,6 +11,11 @@ export type CreateReportData = {
   app_version?: string;
 };
 
+export type CreateReportResponse = {
+  report: unknown;
+  emailSent: boolean;
+};
+
 class ReportsApi {
   private baseURL: string;
 
@@ -38,7 +43,7 @@ class ReportsApi {
   }
 
   async createReport(token: string, data: Omit<CreateReportData, 'device_info' | 'app_version'>) {
-    return this.request('/reports', token, {
+    return this.request<CreateReportResponse>('/reports', token, {
       method: 'POST',
       body: JSON.stringify({
         ...data,

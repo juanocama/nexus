@@ -76,14 +76,20 @@ export default function SupportReportScreen() {
 
     try {
       setIsSubmitting(true);
-      await reportsApi.createReport(token, {
+      const result = await reportsApi.createReport(token, {
         type,
         title: title.trim(),
         description: description.trim(),
       });
-      Alert.alert('Reporte enviado', 'Gracias por ayudarnos a mejorar Nexus.', [
+      Alert.alert(
+        result.emailSent ? 'Reporte enviado' : 'Reporte guardado',
+        result.emailSent
+          ? 'Tu reporte fue guardado y enviado al correo de soporte.'
+          : 'Tu reporte fue guardado, pero no se pudo enviar el correo. El equipo puede revisarlo en la base de datos.',
+        [
         { text: 'OK', onPress: () => router.back() },
-      ]);
+        ],
+      );
     } catch (error) {
       Alert.alert('No se pudo enviar', error instanceof Error ? error.message : 'Intentalo de nuevo mas tarde.');
     } finally {

@@ -15,7 +15,7 @@ export class ReportsService {
     private mailerService: MailerService,
   ) {}
 
-  async create(userId: string, dto: CreateReportDto): Promise<Report> {
+  async create(userId: string, dto: CreateReportDto): Promise<{ report: Report; emailSent: boolean }> {
     const report = this.reportsRepository.create({
       ...dto,
       device_info: dto.device_info || null,
@@ -25,9 +25,12 @@ export class ReportsService {
     });
 
     const savedReport = await this.reportsRepository.save(report);
-    await this.sendReportEmail(userId, savedReport);
+    const emailSent = await this.sendReportEmail(userId, savedReport);
 
-    return savedReport;
+    return {
+      report: savedReport,
+      emailSent,
+    };
   }
 
   async findAll(): Promise<Report[]> {
@@ -37,12 +40,12 @@ export class ReportsService {
     });
   }
 
-  private async sendReportEmail(userId: string, report: Report): Promise<void> {
+  private async sendReportEmail(userId: string, report: Report): Promise<boolean> {
     const to = process.env.SUPPORT_EMAIL;
 
     if (!to) {
       this.logger.warn('SUPPORT_EMAIL is not configured. Report email was skipped.');
-      return;
+      return false;
     }
 
     const fields = [
@@ -81,8 +84,10 @@ export class ReportsService {
           </div>
         `,
       });
+      return true;
     } catch (error) {
       this.logger.error('Failed to send report email', error instanceof Error ? error.stack : String(error));
+      return false;
     }
   }
 
