@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
@@ -23,6 +24,8 @@ import { AddPaymentCardDto, PayWithSavedCardDto, SetDefaultPaymentCardDto } from
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     @InjectRepository(Payment)
     private paymentsRepository: Repository<Payment>,
@@ -128,7 +131,13 @@ export class PaymentsService {
   async createPreference(
     createDto: CreatePaymentPreferenceDto,
     user: { id: string; email?: string },
-  ): Promise<{ checkout_url: string; sandbox_url: string; preference_id: string }> {
+  ): Promise<{
+    checkout_url: string;
+    sandbox_url: string;
+    payment_url: string;
+    preference_id: string;
+    checkout_mode: 'production' | 'sandbox';
+  }> {
     const booking = await this.bookingsRepository.findOne({
       where: { id: createDto.booking_id },
       relations: ['trip', 'passenger'],
@@ -158,21 +167,29 @@ export class PaymentsService {
       throw new BadRequestException('Booking already paid');
     }
 
-    if (!user.email) {
-      throw new InternalServerErrorException('Authenticated user email is required to create payment preference');
-    }
-
     const preferenceClient = this.buildMercadoPagoPreference();
     const frontendUrl = process.env.FRONTEND_URL?.trim();
     if (!frontendUrl) {
       throw new InternalServerErrorException('FRONTEND_URL is required to build Mercado Pago return URLs');
     }
 
+    let parsedFrontendUrl: URL;
+    try {
+      parsedFrontendUrl = new URL(frontendUrl);
+    } catch {
+      throw new InternalServerErrorException(`FRONTEND_URL is invalid: ${frontendUrl}`);
+    }
+
+    if (!['http:', 'https:'].includes(parsedFrontendUrl.protocol)) {
+      throw new InternalServerErrorException(`FRONTEND_URL must start with http:// or https://: ${frontendUrl}`);
+    }
+
     const backUrls = {
-      success: `${frontendUrl}/payment/success`,
-      failure: `${frontendUrl}/payment/failure`,
-      pending: `${frontendUrl}/payment/pending`,
+      success: new URL('/payment/success', parsedFrontendUrl).toString(),
+      failure: new URL('/payment/failure', parsedFrontendUrl).toString(),
+      pending: new URL('/payment/pending', parsedFrontendUrl).toString(),
     };
+    const testBuyerEmail = process.env.MP_TEST_USER_EMAIL || 'test_user_3400430302@testuser.com';
 
     const preferenceBody: any = {
       items: [
@@ -185,7 +202,7 @@ export class PaymentsService {
         },
       ],
       payer: {
-        email: process.env.MP_TEST_USER_EMAIL ?? 'test_user_7476469557162763598@testuser.com',
+        email: testBuyerEmail,
       },
       binary_mode: true,
       external_reference: booking.id,
@@ -206,9 +223,9 @@ export class PaymentsService {
         body: preferenceBody,
       });
     } catch (error: any) {
-      const detail = error?.message || JSON.stringify(error);
-      console.error('Failed to create Mercado Pago preference:', detail);
-      throw new InternalServerErrorException('Failed to create Mercado Pago preference');
+      const detail = error?.message || error?.cause?.message || JSON.stringify(error);
+      this.logger.error(`Failed to create Mercado Pago preference: ${detail}`);
+      throw new InternalServerErrorException(`Failed to create Mercado Pago preference: ${detail}`);
     }
 
     const preferenceId = result.id ?? result.body?.id;
@@ -218,6 +235,9 @@ export class PaymentsService {
     if (!preferenceId || !checkoutUrl || !sandboxUrl) {
       throw new InternalServerErrorException('Mercado Pago returned invalid preference response');
     }
+
+    const checkoutMode = process.env.MP_ACCESS_TOKEN?.startsWith('TEST-') ? 'sandbox' : 'production';
+    const paymentUrl = checkoutMode === 'sandbox' ? sandboxUrl : checkoutUrl;
 
     const providerResponse = result.body ?? result;
 
@@ -237,7 +257,9 @@ export class PaymentsService {
     return {
       checkout_url: checkoutUrl,
       sandbox_url: sandboxUrl,
+      payment_url: paymentUrl,
       preference_id: preferenceId,
+      checkout_mode: checkoutMode,
     };
   }
 

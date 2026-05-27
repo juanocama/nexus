@@ -3,7 +3,9 @@ import { CONFIG } from '@/utils/config';
 export interface CreatePreferenceResponse {
   checkout_url: string;
   sandbox_url: string;
+  payment_url: string;
   preference_id: string;
+  checkout_mode: 'production' | 'sandbox';
 }
 
 export interface VerifyPaymentResponse {

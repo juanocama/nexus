@@ -57,7 +57,7 @@ async function launchPayment(bookingId: string, token: string): Promise<void> {
   console.log('🔵 Llamando createPreference con bookingId:', bookingId);
   const response = await paymentsApi.createPreference(token, bookingId);
   console.log('🟢 Respuesta de MercadoPago:', response);
-  const url = response.checkout_url || response.sandbox_url;
+  const url = response.payment_url || response.checkout_url || response.sandbox_url;
   console.log('🔗 URL a abrir:', url);
 
   if (!url) {
